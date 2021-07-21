@@ -4,16 +4,16 @@ namespace AES_GCM_cs
 {
     class Program
     {
-        static void Main(string[] args)
+        static void TestGCM()
         {
             byte[] key = new byte[16]
             {
                 0x98,0xff,0xf6,0x7e,0x64,0xe4,0x6b,0xe5,0xee,0x2e,0x05,0xcc,0x9a,0xf6,0xd0,0x12
             };
 
-            byte[] IV = new byte[12] 
-            { 
-                0x2d, 0xfb, 0x42, 0x9a, 0x48, 0x69, 0x7c, 0x34, 0x00, 0x6d, 0xa8, 0x86 
+            byte[] IV = new byte[12]
+            {
+                0x2d, 0xfb, 0x42, 0x9a, 0x48, 0x69, 0x7c, 0x34, 0x00, 0x6d, 0xa8, 0x86
             };
 
             byte[] plaintext = new byte[48]
@@ -92,6 +92,11 @@ namespace AES_GCM_cs
                     Console.WriteLine($"tag {MemCmp(tag, x, 16)}");
                 }
             }
+        }
+
+        static void Main(string[] args)
+        {
+            aes128.Test();
         }
     }
 }
