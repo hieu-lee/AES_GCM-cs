@@ -87,9 +87,10 @@ namespace AES_GCM_cs
 
         static void ShiftRows(byte[,] state)
         {
+            byte[] tmp;
             for (int i = 1; i < 4; i++)
             {
-                var tmp = new byte[4]
+                tmp = new byte[4]
                 {
                     state[0,i],
                     state[1,i],
@@ -105,9 +106,10 @@ namespace AES_GCM_cs
 
         static void InvShiftRows(byte[,] state)
         {
+            byte[] tmp;
             for (int i = 1; i < 4; i++)
             {
-                var tmp = new byte[4]
+                tmp = new byte[4]
                 {
                     state[0,i],
                     state[1,i],
@@ -123,10 +125,11 @@ namespace AES_GCM_cs
 
         static void MixColumns(byte[,] state)
         {
+            byte t, u;
             for (int i = 0; i < 4; i++)
             {
-                byte t = (byte)(state[i,0] ^ state[i,1] ^ state[i,2] ^ state[i,3]);
-                byte u = state[i, 0];
+                t = (byte)(state[i,0] ^ state[i,1] ^ state[i,2] ^ state[i,3]);
+                u = state[i, 0];
                 state[i,0] ^= (byte) (t ^ XTime((byte)(state[i,0] ^ state[i,1])));
                 state[i,1] ^= (byte) (t ^ XTime((byte)(state[i,1] ^ state[i,2])));
                 state[i,2] ^= (byte) (t ^ XTime((byte)(state[i,2] ^ state[i,3])));
@@ -136,10 +139,11 @@ namespace AES_GCM_cs
         
         static void InvMixColumns(byte[,] state)
         {
+            byte u, v;
             for (int i = 0; i < 4; i++)
             {
-                byte u = XTime(XTime((byte)(state[i,0] ^ state[i,2])));
-                byte v = XTime(XTime((byte)(state[i,1] ^ state[i,3])));
+                u = XTime(XTime((byte)(state[i,0] ^ state[i,2])));
+                v = XTime(XTime((byte)(state[i,1] ^ state[i,3])));
                 state[i,0] ^= u;
                 state[i,1] ^= v;
                 state[i,2] ^= u;
