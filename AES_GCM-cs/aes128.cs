@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BenchmarkDotNet.Attributes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -63,153 +64,160 @@ namespace AES_GCM_cs
         }
 
         
-        static void SubBytes(byte[,] state)
+        static void SubBytes(byte[] state)
         {
             for (int i = 0; i < 4; i++)
             {
                 for (int j = 0; j < 4; j++)
                 {
-                    state[i, j] = SBox[state[i, j]];
+                    var c = 4 * i + j;
+                    state[c] = SBox[state[c]];
                 }
             }
         }
 
-        static void InvSubBytes(byte[,] state)
+        static void InvSubBytes(byte[] state)
         {
             for (int i = 0; i < 4; i++)
             {
                 for (int j = 0; j < 4; j++)
                 {
-                    state[i, j] = InvSBox[state[i, j]];
+                    var c = 4 * i + j;
+                    state[c] = InvSBox[state[c]];
                 }
             }
         }
 
-        static void ShiftRows(byte[,] state)
+        static void ShiftRows(byte[] state)
         {
             byte[] tmp;
             for (int i = 1; i < 4; i++)
             {
                 tmp = new byte[4]
                 {
-                    state[0,i],
-                    state[1,i],
-                    state[2,i],
-                    state[3,i],
+                    state[i],
+                    state[1 + i],
+                    state[2 + i],
+                    state[3 + i],
                 };
-                state[0,i] = tmp[i % 4];
-                state[1,i] = tmp[(i + 1) % 4];
-                state[2,i] = tmp[(i + 2) % 4];
-                state[3,i] = tmp[(i + 3) % 4];
+                state[i] = tmp[i % 4];
+                state[1 + i] = tmp[(i + 1) % 4];
+                state[2 + i] = tmp[(i + 2) % 4];
+                state[3 + i] = tmp[(i + 3) % 4];
             }
         }
 
-        static void InvShiftRows(byte[,] state)
+        static void InvShiftRows(byte[] state)
         {
             byte[] tmp;
             for (int i = 1; i < 4; i++)
             {
                 tmp = new byte[4]
                 {
-                    state[0,i],
-                    state[1,i],
-                    state[2,i],
-                    state[3,i],
+                    state[i],
+                    state[1 + i],
+                    state[2 + i],
+                    state[3 + i],
                 };
-                state[0,i] = tmp[(4 - i) % 4];
-                state[1,i] = tmp[(5 - i) % 4];
-                state[2,i] = tmp[(6 - i) % 4];
-                state[3,i] = tmp[(7 - i) % 4];
+                state[i] = tmp[(4 - i) % 4];
+                state[1 + i] = tmp[(5 - i) % 4];
+                state[2 + i] = tmp[(6 - i) % 4];
+                state[3 + i] = tmp[(7 - i) % 4];
             }
         }
 
-        static void MixColumns(byte[,] state)
+        static void MixColumns(byte[] state)
         {
             byte t, u;
             for (int i = 0; i < 4; i++)
             {
-                t = (byte)(state[i,0] ^ state[i,1] ^ state[i,2] ^ state[i,3]);
-                u = state[i, 0];
-                state[i,0] ^= (byte) (t ^ XTime((byte)(state[i,0] ^ state[i,1])));
-                state[i,1] ^= (byte) (t ^ XTime((byte)(state[i,1] ^ state[i,2])));
-                state[i,2] ^= (byte) (t ^ XTime((byte)(state[i,2] ^ state[i,3])));
-                state[i,3] ^= (byte) (t ^ XTime((byte)(state[i,3] ^ u)));
+                var c = 4 * i;
+                t = (byte)(state[c] ^ state[c + 1] ^ state[c + 2] ^ state[c + 3]);
+                u = state[c +  0];
+                state[c + 0] ^= (byte) (t ^ XTime((byte)(state[c + 0] ^ state[c + 1])));
+                state[c + 1] ^= (byte) (t ^ XTime((byte)(state[c + 1] ^ state[c + 2])));
+                state[c + 2] ^= (byte) (t ^ XTime((byte)(state[c + 2] ^ state[c + 3])));
+                state[c + 3] ^= (byte) (t ^ XTime((byte)(state[c + 3] ^ u)));
             }
         }
         
-        static void InvMixColumns(byte[,] state)
+        static void InvMixColumns(byte[] state)
         {
             byte u, v;
             for (int i = 0; i < 4; i++)
             {
-                u = XTime(XTime((byte)(state[i,0] ^ state[i,2])));
-                v = XTime(XTime((byte)(state[i,1] ^ state[i,3])));
-                state[i,0] ^= u;
-                state[i,1] ^= v;
-                state[i,2] ^= u;
-                state[i,3] ^= v;
+                var c = 4 * i;
+                u = XTime(XTime((byte)(state[c] ^ state[c + 2])));
+                v = XTime(XTime((byte)(state[c + 1] ^ state[c + 3])));
+                state[c] ^= u;
+                state[c + 1] ^= v;
+                state[c + 2] ^= u;
+                state[c + 3] ^= v;
             }
             MixColumns(state);
         }
 
-        static void AddRoundKey(byte[,] state, byte[,] RoundKey)
+        static void AddRoundKey(byte[] state, byte[] RoundKey)
         {
             for (int i = 0; i < 4; i++)
             {
                 for (int j = 0; j < 4; j++)
                 {
-                    state[i, j] ^= RoundKey[i, j];
+                    var c = i * 4 + j;
+                    state[c] ^= RoundKey[c];
                 }
             }
         }
 
-        static byte[,] KeyExpansion(byte[,] RoundKey, int round) 
+        static byte[] KeyExpansion(byte[] RoundKey, int round) 
         {
-            var res = new byte[4, 4];
+            var res = new byte[16];
             var temp = new byte[4]
             {
-                SBox[RoundKey[3,1]],
-                SBox[RoundKey[3,2]],
-                SBox[RoundKey[3,3]],
-                SBox[RoundKey[3,0]]
+                SBox[RoundKey[13]],
+                SBox[RoundKey[14]],
+                SBox[RoundKey[15]],
+                SBox[RoundKey[12]]
             };
             for (int j = 0; j < 4; j++)
             {
-                res[0, j] = (byte)(temp[j] ^ RoundKey[0, j]);
+                res[j] = (byte)(temp[j] ^ RoundKey[j]);
             }
-            res[0, 0] ^= RCon[round - 1];
+            res[0] ^= RCon[round - 1];
             for (int i = 1; i < 4; i++)
             {
                 for (int j = 0; j < 4; j++)
                 {
-                    res[i, j] = (byte)(res[i - 1, j] ^ RoundKey[i, j]);
+                    var c = i * 4 + j;
+                    res[c] = (byte)(res[c - 4] ^ RoundKey[c]);
                 }
             }
             return res;
         }
 
-        static byte[,] InvKeyExpansion(byte[,] RoundKey, int round)
+        static byte[] InvKeyExpansion(byte[] RoundKey, int round)
         {
-            var res = new byte[4, 4];
+            var res = new byte[16];
             for (int i = 1; i < 4; i++)
             {
                 for (int j = 0; j < 4; j++)
                 {
-                    res[i, j] = (byte)(RoundKey[i, j] ^ RoundKey[i - 1, j]);
+                    var c = i * 4 + j;
+                    res[c] = (byte)(RoundKey[c] ^ RoundKey[c - 4]);
                 }
             }
             var temp = new byte[4]
             {
-                SBox[res[3,1]],
-                SBox[res[3,2]],
-                SBox[res[3,3]],
-                SBox[res[3,0]]
+                SBox[res[13]],
+                SBox[res[14]],
+                SBox[res[15]],
+                SBox[res[12]]
             };
             for (int j = 0; j < 4; j++)
             {
-                res[0, j] = (byte)(RoundKey[0, j] ^ temp[j]);
+                res[j] = (byte)(RoundKey[j] ^ temp[j]);
             }
-            res[0, 0] ^= RCon[10 - round];
+            res[0] ^= RCon[10 - round];
             return res;
         }
 
@@ -238,32 +246,29 @@ namespace AES_GCM_cs
             return res;
         }
 
-        public static Tuple<byte[], byte[]> AES128E(byte[] input, byte[] key)
+
+        public static Tuple<byte[], byte[]> AES128E(byte[] state, byte[] RoundKey)
         {
-            var state = ArrayToMatrix(input);
-            var RoundKey = ArrayToMatrix(key);
             AddRoundKey(state, RoundKey);
-            
+
             for (var round = 1; round < 10; round++)
             {
-                
                 RoundKey = KeyExpansion(RoundKey, round);
                 SubBytes(state);
                 ShiftRows(state);
                 MixColumns(state);
                 AddRoundKey(state, RoundKey);
             }
+
             RoundKey = KeyExpansion(RoundKey, 10);
             SubBytes(state);
             ShiftRows(state);
             AddRoundKey(state, RoundKey);
-            return new(MatrixToArray(state), MatrixToArray(RoundKey));
+            return new(state, RoundKey);
         }
 
-        public static Tuple<byte[], byte[]> AES128D(byte[] CipherText, byte[] key)
+        public static Tuple<byte[], byte[]> AES128D(byte[] state, byte[] RoundKey)
         {
-            var state = ArrayToMatrix(CipherText);
-            var RoundKey = ArrayToMatrix(key);
             AddRoundKey(state, RoundKey);
             InvShiftRows(state);
             InvSubBytes(state);
@@ -277,7 +282,7 @@ namespace AES_GCM_cs
                 RoundKey = InvKeyExpansion(RoundKey, round);
             }
             AddRoundKey(state, RoundKey);
-            return new(MatrixToArray(state), MatrixToArray(RoundKey));
+            return new(state, RoundKey);
         }
 
         public static void PrintMatrix(byte[,] matrix)

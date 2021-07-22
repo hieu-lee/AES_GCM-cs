@@ -1,8 +1,12 @@
-﻿using System;
+﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
+using System;
+using System.Threading.Tasks;
 
 namespace AES_GCM_cs
 {
-    class Program
+    [MemoryDiagnoser]
+    public class Program
     {
         static void TestGCM()
         {
@@ -94,9 +98,54 @@ namespace AES_GCM_cs
             }
         }
 
+        [Benchmark]
+        public void TestAES1()
+        {
+            var Key = new byte[16]
+            {
+                0x00, 0x01, 0x02, 0x03,
+                0x04, 0x05, 0x06, 0x07,
+                0x08, 0x09, 0x0a, 0x0b,
+                0x0c, 0x0d, 0x0e, 0x0f
+            };
+
+            var Input = new byte[16]
+            {
+                0x00, 0x11, 0x22, 0x33,
+                0x44, 0x55, 0x66, 0x77,
+                0x88, 0x99, 0xaa, 0xbb,
+                0xcc, 0xdd, 0xee, 0xff
+            };
+
+            aes128.AES128E(Input, Key);
+        }
+
+        [Benchmark]
+        public void TestAES2()
+        {
+            var Key = new byte[16]
+            {
+                0x00, 0x01, 0x02, 0x03,
+                0x04, 0x05, 0x06, 0x07,
+                0x08, 0x09, 0x0a, 0x0b,
+                0x0c, 0x0d, 0x0e, 0x0f
+            };
+
+            var Input = new byte[16]
+            {
+                0x00, 0x11, 0x22, 0x33,
+                0x44, 0x55, 0x66, 0x77,
+                0x88, 0x99, 0xaa, 0xbb,
+                0xcc, 0xdd, 0xee, 0xff
+            };
+
+            var C = new byte[16];
+            aes128e.AES128E(Input, Key, C);
+        }
+
         static void Main(string[] args)
         {
-            aes128.Test();
+            var summary = BenchmarkRunner.Run<Program>();
         }
     }
 }
