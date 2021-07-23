@@ -10,7 +10,7 @@ namespace AES_GCM_cs
     // My own implementation of AES128 after reading stuffs
     class aes128
     {
-        // "state" is always a 4x4 Matrix
+        // "state" is always a byte[16] array
 
 
         static readonly byte[] SBox = new byte[256]
@@ -66,25 +66,17 @@ namespace AES_GCM_cs
         
         static void SubBytes(byte[] state)
         {
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 16; i++)
             {
-                for (int j = 0; j < 4; j++)
-                {
-                    var c = 4 * i + j;
-                    state[c] = SBox[state[c]];
-                }
+                state[i] = SBox[state[i]];
             }
         }
 
         static void InvSubBytes(byte[] state)
         {
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 16; i++)
             {
-                for (int j = 0; j < 4; j++)
-                {
-                    var c = 4 * i + j;
-                    state[c] = InvSBox[state[c]];
-                }
+                state[i] = InvSBox[state[i]];
             }
         }
 
@@ -129,9 +121,10 @@ namespace AES_GCM_cs
         static void MixColumns(byte[] state)
         {
             byte t, u;
+            int c;
             for (int i = 0; i < 4; i++)
             {
-                var c = 4 * i;
+                c = 4 * i;
                 t = (byte)(state[c] ^ state[c + 1] ^ state[c + 2] ^ state[c + 3]);
                 u = state[c +  0];
                 state[c + 0] ^= (byte) (t ^ XTime((byte)(state[c + 0] ^ state[c + 1])));
@@ -144,9 +137,10 @@ namespace AES_GCM_cs
         static void InvMixColumns(byte[] state)
         {
             byte u, v;
+            int c;
             for (int i = 0; i < 4; i++)
             {
-                var c = 4 * i;
+                c = 4 * i;
                 u = XTime(XTime((byte)(state[c] ^ state[c + 2])));
                 v = XTime(XTime((byte)(state[c + 1] ^ state[c + 3])));
                 state[c] ^= u;
@@ -159,13 +153,9 @@ namespace AES_GCM_cs
 
         static void AddRoundKey(byte[] state, byte[] RoundKey)
         {
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 16; i++)
             {
-                for (int j = 0; j < 4; j++)
-                {
-                    var c = i * 4 + j;
-                    state[c] ^= RoundKey[c];
-                }
+                state[i] ^= RoundKey[i];
             }
         }
 
@@ -184,13 +174,9 @@ namespace AES_GCM_cs
                 res[j] = (byte)(temp[j] ^ RoundKey[j]);
             }
             res[0] ^= RCon[round - 1];
-            for (int i = 1; i < 4; i++)
+            for (int i = 4; i < 16; i++)
             {
-                for (int j = 0; j < 4; j++)
-                {
-                    var c = i * 4 + j;
-                    res[c] = (byte)(res[c - 4] ^ RoundKey[c]);
-                }
+                res[i] = (byte)(res[i - 4] ^ RoundKey[i]);
             }
             return res;
         }
@@ -198,13 +184,9 @@ namespace AES_GCM_cs
         static byte[] InvKeyExpansion(byte[] RoundKey, int round)
         {
             var res = new byte[16];
-            for (int i = 1; i < 4; i++)
+            for (int i = 4; i < 16; i++)
             {
-                for (int j = 0; j < 4; j++)
-                {
-                    var c = i * 4 + j;
-                    res[c] = (byte)(RoundKey[c] ^ RoundKey[c - 4]);
-                }
+                res[i] = (byte)(RoundKey[i] ^ RoundKey[i - 4]);
             }
             var temp = new byte[4]
             {
@@ -247,7 +229,7 @@ namespace AES_GCM_cs
         }
 
 
-        public static Tuple<byte[], byte[]> AES128E(byte[] state, byte[] RoundKey)
+        public static TupleU128 AES128E(byte[] state, byte[] RoundKey)
         {
             AddRoundKey(state, RoundKey);
 
@@ -267,7 +249,7 @@ namespace AES_GCM_cs
             return new(state, RoundKey);
         }
 
-        public static Tuple<byte[], byte[]> AES128D(byte[] state, byte[] RoundKey)
+        public static TupleU128 AES128D(byte[] state, byte[] RoundKey)
         {
             AddRoundKey(state, RoundKey);
             InvShiftRows(state);

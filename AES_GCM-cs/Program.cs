@@ -146,6 +146,7 @@ namespace AES_GCM_cs
         static void Main(string[] args)
         {
             var summary = BenchmarkRunner.Run<Program>();
+            // aes128.Test();
         }
     }
 }
