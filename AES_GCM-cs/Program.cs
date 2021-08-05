@@ -80,6 +80,9 @@ namespace AES_GCM_cs
                     Console.ReadLine();
                     return;
             }
+            Console.WriteLine("Press any key to close this window...");
+            Console.ReadLine();
+            return;
         }
 
         // Uncomment the line RunTest() to see some test results
