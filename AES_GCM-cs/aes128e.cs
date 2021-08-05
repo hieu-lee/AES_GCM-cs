@@ -3,6 +3,7 @@ using System;
 
 namespace AES_GCM_cs
 {
+	// This is the original implementation of AES128 found online
 	class aes128e
 	{
 		public static byte xtime(byte a)

@@ -1,5 +1,4 @@
-﻿using BenchmarkDotNet.Attributes;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,8 +9,6 @@ namespace AES_GCM_cs
     // My own implementation of AES128 after reading stuffs
     class aes128
     {
-        // "state" is always a byte[16] array
-
 
         static readonly byte[] SBox = new byte[256]
         {
@@ -63,7 +60,7 @@ namespace AES_GCM_cs
             return (byte)(((a & 0x80) != 0) ? ((a << 1) ^ 0x1b) : (a << 1));
         }
 
-        
+
         static void SubBytes(byte[] state)
         {
             for (int i = 0; i < 16; i++)
@@ -88,14 +85,14 @@ namespace AES_GCM_cs
                 tmp = new byte[4]
                 {
                     state[i],
-                    state[1 + i],
-                    state[2 + i],
-                    state[3 + i],
+                    state[4 + i],
+                    state[8 + i],
+                    state[12 + i],
                 };
                 state[i] = tmp[i % 4];
-                state[1 + i] = tmp[(i + 1) % 4];
-                state[2 + i] = tmp[(i + 2) % 4];
-                state[3 + i] = tmp[(i + 3) % 4];
+                state[4 + i] = tmp[(i + 1) % 4];
+                state[8 + i] = tmp[(i + 2) % 4];
+                state[12 + i] = tmp[(i + 3) % 4];
             }
         }
 
@@ -107,33 +104,32 @@ namespace AES_GCM_cs
                 tmp = new byte[4]
                 {
                     state[i],
-                    state[1 + i],
-                    state[2 + i],
-                    state[3 + i],
+                    state[4 + i],
+                    state[8 + i],
+                    state[12 + i],
                 };
                 state[i] = tmp[(4 - i) % 4];
-                state[1 + i] = tmp[(5 - i) % 4];
-                state[2 + i] = tmp[(6 - i) % 4];
-                state[3 + i] = tmp[(7 - i) % 4];
+                state[4 + i] = tmp[(5 - i) % 4];
+                state[8 + i] = tmp[(6 - i) % 4];
+                state[12 + i] = tmp[(7 - i) % 4];
             }
         }
 
         static void MixColumns(byte[] state)
         {
             byte t, u;
-            int c;
             for (int i = 0; i < 4; i++)
             {
-                c = 4 * i;
+                var c = 4 * i;
                 t = (byte)(state[c] ^ state[c + 1] ^ state[c + 2] ^ state[c + 3]);
-                u = state[c +  0];
-                state[c + 0] ^= (byte) (t ^ XTime((byte)(state[c + 0] ^ state[c + 1])));
-                state[c + 1] ^= (byte) (t ^ XTime((byte)(state[c + 1] ^ state[c + 2])));
-                state[c + 2] ^= (byte) (t ^ XTime((byte)(state[c + 2] ^ state[c + 3])));
-                state[c + 3] ^= (byte) (t ^ XTime((byte)(state[c + 3] ^ u)));
+                u = state[c];
+                state[c] ^= (byte)(t ^ XTime((byte)(state[c] ^ state[c + 1])));
+                state[c + 1] ^= (byte)(t ^ XTime((byte)(state[c + 1] ^ state[c + 2])));
+                state[c + 2] ^= (byte)(t ^ XTime((byte)(state[c + 2] ^ state[c + 3])));
+                state[c + 3] ^= (byte)(t ^ XTime((byte)(state[c + 3] ^ u)));
             }
         }
-        
+
         static void InvMixColumns(byte[] state)
         {
             byte u, v;
@@ -159,7 +155,7 @@ namespace AES_GCM_cs
             }
         }
 
-        static byte[] KeyExpansion(byte[] RoundKey, int round) 
+        static byte[] KeyExpansion(byte[] RoundKey, int round)
         {
             var res = new byte[16];
             var temp = new byte[4]
@@ -203,34 +199,16 @@ namespace AES_GCM_cs
             return res;
         }
 
-        // Transform a byte[16] to byte[4,4]
-        static byte[,] ArrayToMatrix(byte[] arr)
+        // AES128 encryption function 
+        public static TupleU128 AES128E(byte[] input, byte[] key)
         {
-            var res = new byte[4, 4];
+            var state = new byte[16];
+            var RoundKey = new byte[16];
             for (int i = 0; i < 16; i++)
             {
-                res[i / 4, i % 4] = arr[i];
+                RoundKey[i] = key[i];
+                state[i] = input[i];
             }
-            return res;
-        }
-
-        // Transform a byte[4,4] to a byte[16]
-        static byte[] MatrixToArray(byte[,] matrix)
-        {
-            var res = new byte[16];
-            for (int i = 0; i < 4; i++)
-            {
-                for (int j = 0; j < 4; j++)
-                {
-                    res[i * 4 + j] = matrix[i, j];
-                }
-            }
-            return res;
-        }
-
-
-        public static TupleU128 AES128E(byte[] state, byte[] RoundKey)
-        {
             AddRoundKey(state, RoundKey);
 
             for (var round = 1; round < 10; round++)
@@ -241,7 +219,6 @@ namespace AES_GCM_cs
                 MixColumns(state);
                 AddRoundKey(state, RoundKey);
             }
-
             RoundKey = KeyExpansion(RoundKey, 10);
             SubBytes(state);
             ShiftRows(state);
@@ -249,8 +226,16 @@ namespace AES_GCM_cs
             return new(state, RoundKey);
         }
 
-        public static TupleU128 AES128D(byte[] state, byte[] RoundKey)
+        // AES129 decryption function
+        public static TupleU128 AES128D(byte[] CipherText, byte[] key)
         {
+            var state = new byte[16];
+            var RoundKey = new byte[16];
+            for (int i = 0; i < 16; i++)
+            {
+                RoundKey[i] = key[i];
+                state[i] = CipherText[i];
+            }
             AddRoundKey(state, RoundKey);
             InvShiftRows(state);
             InvSubBytes(state);
@@ -267,9 +252,9 @@ namespace AES_GCM_cs
             return new(state, RoundKey);
         }
 
-        public static void PrintMatrix(byte[,] matrix)
+        static void PrintMatrix(byte[,] matrix)
         {
-            var s = "";
+            var s = "[";
             for (int i = 0; i < 4; i++)
             {
                 for (int j = 0; j < 4; j++)
@@ -277,19 +262,22 @@ namespace AES_GCM_cs
                     s += $"{matrix[i, j]}, ";
                 }
             }
+            s += "]";
             Console.WriteLine(s);
         }
 
-        public static void PrintArray(byte[] array)
+        static void PrintArray(byte[] array)
         {
-            var s = "";
+            var s = "[";
             for (int i = 0; i < array.Length; i++)
             {
                 s += $"{array[i]}, ";
             }
+            s += "]";
             Console.WriteLine(s);
         }
 
+        // Run this function to see the test result
         public static void Test()
         {
             var Key = new byte[16]
