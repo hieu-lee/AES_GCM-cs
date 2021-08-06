@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AES_GCM_cs
 {
@@ -77,6 +73,28 @@ namespace AES_GCM_cs
             }
         }
 
+        static void SubAndShiftRows(byte[] state)
+        {
+            state = new byte[16]
+            {
+                SBox[state[0]], SBox[state[5]], SBox[state[10]], SBox[state[15]],
+                SBox[state[4]], SBox[state[9]], SBox[state[14]], SBox[state[13]],
+                SBox[state[8]], SBox[state[13]], SBox[state[2]], SBox[state[7]],
+                SBox[state[12]], SBox[state[1]], SBox[state[6]], SBox[state[11]]
+            };
+        }
+
+        static void InvSubAndShiftRows(byte[] state)
+        {
+            state = new byte[16]
+            {
+                InvSBox[state[0]], InvSBox[state[13]], InvSBox[state[10]], InvSBox[state[7]],
+                InvSBox[state[4]], InvSBox[state[1]], InvSBox[state[14]], InvSBox[state[11]],
+                InvSBox[state[8]], InvSBox[state[5]], InvSBox[state[2]], InvSBox[state[15]],
+                InvSBox[state[12]], InvSBox[state[9]], InvSBox[state[6]], InvSBox[state[3]]
+            };
+        }
+
         static void ShiftRows(byte[] state)
         {
             byte[] tmp;
@@ -118,9 +136,11 @@ namespace AES_GCM_cs
         static void MixColumns(byte[] state)
         {
             byte t, u;
-            for (int i = 0; i < 4; i++)
+            int i;
+            int c;
+            for (i = 0; i < 4; i++)
             {
-                var c = 4 * i;
+                c = 4 * i;
                 t = (byte)(state[c] ^ state[c + 1] ^ state[c + 2] ^ state[c + 3]);
                 u = state[c];
                 state[c] ^= (byte)(t ^ XTime((byte)(state[c] ^ state[c + 1])));
@@ -133,8 +153,9 @@ namespace AES_GCM_cs
         static void InvMixColumns(byte[] state)
         {
             byte u, v;
+            int i;
             int c;
-            for (int i = 0; i < 4; i++)
+            for (i = 0; i < 4; i++)
             {
                 c = 4 * i;
                 u = XTime(XTime((byte)(state[c] ^ state[c + 2])));
@@ -214,14 +235,16 @@ namespace AES_GCM_cs
             for (var round = 1; round < 10; round++)
             {
                 RoundKey = KeyExpansion(RoundKey, round);
-                SubBytes(state);
-                ShiftRows(state);
+                //SubBytes(state);
+                //ShiftRows(state);
+                SubAndShiftRows(state);
                 MixColumns(state);
                 AddRoundKey(state, RoundKey);
             }
             RoundKey = KeyExpansion(RoundKey, 10);
-            SubBytes(state);
-            ShiftRows(state);
+            //SubBytes(state);
+            //ShiftRows(state);
+            SubAndShiftRows(state);
             AddRoundKey(state, RoundKey);
             return new(state, RoundKey);
         }
@@ -237,15 +260,17 @@ namespace AES_GCM_cs
                 state[i] = CipherText[i];
             }
             AddRoundKey(state, RoundKey);
-            InvShiftRows(state);
-            InvSubBytes(state);
+            InvSubAndShiftRows(state);
+            //InvShiftRows(state);
+            //InvSubBytes(state);
             RoundKey = InvKeyExpansion(RoundKey, 1);
             for (var round = 2; round < 11; round++)
             {
                 AddRoundKey(state, RoundKey);
                 InvMixColumns(state);
-                InvShiftRows(state);
-                InvSubBytes(state);
+                InvSubAndShiftRows(state);
+                //InvShiftRows(state);
+                //InvSubBytes(state);
                 RoundKey = InvKeyExpansion(RoundKey, round);
             }
             AddRoundKey(state, RoundKey);

@@ -88,7 +88,7 @@ namespace AES_GCM_cs
         // Uncomment the line RunTest() to see some test results
         static void Main(string[] args)
         {
-            // RunTest();
+            //RunTest();
         }
     }
 }

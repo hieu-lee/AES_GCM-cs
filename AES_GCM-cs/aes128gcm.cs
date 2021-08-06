@@ -238,7 +238,7 @@ namespace AES_GCM_cs
             Console.WriteLine(s);
         }
 
-        //Encryption function
+        // Encryption function
         public static GcmOutput AES128GCMe(byte[] IV, byte[] _P, byte[] _A, byte[] K, uint t)
         {
             var P = BitString.BytesToBitStrings(_P);
