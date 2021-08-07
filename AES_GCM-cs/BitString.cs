@@ -65,9 +65,9 @@
         public BitString(byte[] _Bytes)
         {
             var c = _Bytes.Length;
-            BitLength = (uint)(8 * c);
             if (c < 16)
             {
+                BitLength = (uint)(8 * c);
                 Bytes = new byte[16]
                 {
                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -79,6 +79,7 @@
             }
             else
             {
+                BitLength = 128;
                 Bytes = _Bytes;
             }
         }

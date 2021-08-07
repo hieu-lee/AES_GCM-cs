@@ -75,24 +75,32 @@ namespace AES_GCM_cs
 
         static void SubAndShiftRows(byte[] state)
         {
-            state = new byte[16]
+            var temp = new byte[16]
             {
                 SBox[state[0]], SBox[state[5]], SBox[state[10]], SBox[state[15]],
-                SBox[state[4]], SBox[state[9]], SBox[state[14]], SBox[state[13]],
+                SBox[state[4]], SBox[state[9]], SBox[state[14]], SBox[state[3]],
                 SBox[state[8]], SBox[state[13]], SBox[state[2]], SBox[state[7]],
                 SBox[state[12]], SBox[state[1]], SBox[state[6]], SBox[state[11]]
             };
+            for (int i = 0; i < 16; i++)
+            {
+                state[i] = temp[i];
+            }
         }
 
         static void InvSubAndShiftRows(byte[] state)
         {
-            state = new byte[16]
+            var temp = new byte[16]
             {
                 InvSBox[state[0]], InvSBox[state[13]], InvSBox[state[10]], InvSBox[state[7]],
                 InvSBox[state[4]], InvSBox[state[1]], InvSBox[state[14]], InvSBox[state[11]],
                 InvSBox[state[8]], InvSBox[state[5]], InvSBox[state[2]], InvSBox[state[15]],
                 InvSBox[state[12]], InvSBox[state[9]], InvSBox[state[6]], InvSBox[state[3]]
             };
+            for (int i = 0; i < 16; i++)
+            {
+                state[i] = temp[i];
+            }
         }
 
         static void ShiftRows(byte[] state)
@@ -140,7 +148,7 @@ namespace AES_GCM_cs
             int c;
             for (i = 0; i < 4; i++)
             {
-                c = 4 * i;
+                c = i << 2;
                 t = (byte)(state[c] ^ state[c + 1] ^ state[c + 2] ^ state[c + 3]);
                 u = state[c];
                 state[c] ^= (byte)(t ^ XTime((byte)(state[c] ^ state[c + 1])));
@@ -157,7 +165,7 @@ namespace AES_GCM_cs
             int c;
             for (i = 0; i < 4; i++)
             {
-                c = 4 * i;
+                c = i << 2;
                 u = XTime(XTime((byte)(state[c] ^ state[c + 2])));
                 v = XTime(XTime((byte)(state[c + 1] ^ state[c + 3])));
                 state[c] ^= u;
@@ -249,7 +257,7 @@ namespace AES_GCM_cs
             return new(state, RoundKey);
         }
 
-        // AES129 decryption function
+        // AES128 decryption function
         public static TupleU128 AES128D(byte[] CipherText, byte[] key)
         {
             var state = new byte[16];

@@ -5,24 +5,20 @@ namespace AES_GCM_cs
     // My own AES128GCM implementation after reading stuffs
     class aes128gcm
     {
-        static readonly byte[] ZeroU128 = new byte[16]
-        {
-           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        };
 
-        const uint twoP32 = 4294967;
+        const int twoP32 = 4294967;
 
         public static void inc32(byte[] x)
         {
-            uint lsb = 0;
-            lsb |= (uint)(x[12] << 24);
-            lsb |= (uint)(x[13] << 16);
-            lsb |= (uint)(x[14] << 8);
+            int lsb = 0;
+            lsb |= x[12] << 24;
+            lsb |= x[13] << 16;
+            lsb |= x[14] << 8;
             lsb |= x[15];
 
             lsb++;
 
-            uint after_mod = lsb % twoP32;
+            int after_mod = lsb % twoP32;
 
             x[15] = (byte)after_mod;
 
@@ -55,15 +51,13 @@ namespace AES_GCM_cs
             }
         }
 
-        public static byte[] xor_block(byte[] a, byte[] b, int length = 16)
+        public static void xor_block(byte[] dst, byte[] src, int length = 16)
         {
             int i;
-            byte[] res = new byte[length];
             for (i = 0; i < length; i++)
             {
-                res[i] = (byte)(a[i] ^ b[i]);
+                dst[i] ^= src[i];
             }
-            return res;
         }
 
         // Return the concatenation of two array
@@ -83,14 +77,13 @@ namespace AES_GCM_cs
             return res;
         }
 
-        static byte[] len(BitString[] A)
+        static byte[] len(byte[] A)
         {
             byte[] res = new byte[8];
-            ulong l = (ulong)A.Length;
-            ulong c = ((l - 1) * 128) + A[l - 1].BitLength;
+            int c = A.Length << 3;
             for (int i = 0; i < 8; i++)
             {
-                res[i] = (byte)((c >> ((7 - i) * 8)) & 0xff);
+                res[i] = (byte)((c >> ((7 - i) << 3)) & 0xff);
             }
             return res;
         }
@@ -101,7 +94,13 @@ namespace AES_GCM_cs
 
             int i, j, lsb;
 
-            byte[] Z = ZeroU128;
+            byte[] Z = new byte[16] 
+            {
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0
+            };
 
             for (i = 0; i < 16; i++)
             {
@@ -112,11 +111,9 @@ namespace AES_GCM_cs
             {
                 for (j = 0; j < 8; j++)
                 {
-                    int Ybit = Y[i] >> (7 - j) & 1;
-
-                    if ((Ybit & 0x01) == 1)
+                    if ((Y[i] >> (7 - j)) == 1)
                     {
-                        Z = xor_block(Z, V);
+                        xor_block(Z, V);
                     }
 
                     lsb = V[15] & 0x01;
@@ -131,42 +128,56 @@ namespace AES_GCM_cs
             return Z;
         }
 
-        static BitString Ghash(byte[] H, BitString[] X)
+        static byte[] Ghash(byte[] H, byte[] X, int len_X)
         {
-            var m = X.Length;
-            var Y = g_mult(H, X[0].Bytes);
-
-            for (int i = 1; i < m; i++)
+            int c;
+            var temp = new byte[16];
+            for (int i = 0; i < 16; i++)
             {
-                var Xi = X[i].Bytes;
-                Y = xor_block(Y, Xi);
+                temp[i] = X[i];
+            }
+            var Y = g_mult(H, temp);
+
+            for (int i = 1; i < len_X; i++)
+            {
+                c = i << 4;
+                for (int j = 0; j < 16; j++)
+                {
+                    temp[j] = X[c + j];
+                }
+                xor_block(Y, temp);
                 Y = g_mult(Y, H);
             }
-            return new(Y);
+            return Y;
         }
 
-        static BitString[] Gctr(byte[] K, byte[] ICB, BitString[] X)
+        static void Gctr(byte[] K, byte[] ICB, byte[] X, int len_X, int last_len_X, byte[] Cipher)
         {
             if (X.Length == 0)
             {
-                return X;
+                return;
             }
-            var n = X.Length;
-            var Y = new BitString[n];
+            int i, j, c;
+            byte[] tmp;
             var CB = ICB;
-            for (int i = 0; i < n - 1; i++)
+
+            for (i = 0; i < len_X - 1; i++)
             {
-                var tmp = aes128.AES128E(CB, K).Item1;
-                Y[i] = new(xor_block(X[i].Bytes, tmp));
+                c = i << 4;
+                tmp = aes128.AES128E(CB, K).Item1;
+                for (j = 0; j < 16; j++)
+                {
+                    Cipher[c + j] = (byte)(tmp[j] ^ X[c + j]);
+                }
                 inc32(CB);
             }
 
-            var temp = aes128.AES128E(CB, K).Item1;
-            temp = xor_block(temp, X[n - 1].Bytes);
-            temp = MSB(temp, X[n - 1].BitLength);
-            Y[n - 1] = new(temp);
-            return Y;
-
+            tmp = aes128.AES128E(CB, K).Item1;
+            c = (len_X - 1) << 4;
+            for (i = 0; i < last_len_X; i++)
+            {
+                Cipher[c + i] = (byte)(tmp[i] ^ X[c + i]);
+            }
         }
 
         // Run this function to see a test result
@@ -203,14 +214,12 @@ namespace AES_GCM_cs
                 0xe3,0x19,0x26,0x59,0xd5,0x66,0x39,0x8a,0x5d,0x95,0xf3,0xe0,0x4b,0xcd,0x53,0x57
             };
 
-            uint t = 128;
-
-            var resE = AES128GCMe(IV, P, A, K, t);
+            var resE = AES128GCMe(IV, P, A, K);
 
             var C = resE.CipherText;
             var T = resE.Tag;
 
-            var resD = AES128GCMd(IV, C, K, A, T, t);
+            var resD = AES128GCMd(IV, C, K, A, T);
 
             Console.WriteLine("Ciphertext result:");
             PrintArray(C);
@@ -239,11 +248,18 @@ namespace AES_GCM_cs
         }
 
         // Encryption function
-        public static GcmOutput AES128GCMe(byte[] IV, byte[] _P, byte[] _A, byte[] K, uint t)
+        public static GcmOutput AES128GCMe(byte[] IV, byte[] _P, byte[] _A, byte[] K)
         {
-            var P = BitString.BytesToBitStrings(_P);
-            var A = BitString.BytesToBitStrings(_A);
-            var H = aes128.AES128E(ZeroU128, K).Item1;
+            var last_len_a = (_A.Length % 16 == 0) ? 16 : _A.Length % 16;
+            var last_len_p = (_P.Length % 16 == 0) ? 16 : _P.Length % 16;
+            var len_a = (last_len_a == 16) ? (_A.Length / 16) : (_A.Length / 16 + 1);
+            var len_p = (last_len_p == 16) ? (_P.Length / 16) : (_P.Length / 16 + 1);
+            var C = new byte[_P.Length];
+            var T = new byte[16];
+            var H = aes128.AES128E(new byte[16]
+            {
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            }, K).Item1;
             var Y0 = new byte[16];
             Y0[12] = 0;
             Y0[13] = 0;
@@ -254,22 +270,26 @@ namespace AES_GCM_cs
                 Y0[i] = IV[i];
             }
             inc32(Y0);
-            var C = Gctr(K, Y0, P);
-            BitString temp = new(concate_block(len(A), len(C)));
-            var lenA = A.Length;
-            var lenC = C.Length;
-            var l = lenA + lenC + 1;
-            var tmp = new BitString[l];
-            for (int i = 0; i < lenA; i++)
+            Gctr(K, Y0, _P, len_p, last_len_p, C);
+
+            byte[] temp = concate_block(len(_A), len(C));
+            len_a <<= 4;
+            len_p <<= 4;
+            var l = len_a + len_p + 16;
+            var tmp = new byte[l];
+            for (int i = 0; i < len_a; i++)
             {
-                tmp[i] = A[i];
+                tmp[i] = _A[i];
             }
-            for (int i = lenA; i < l - 1; i++)
+            for (int i = len_a; i < l - 16; i++)
             {
-                tmp[i] = C[i - lenA];
+                tmp[i] = C[i - len_a];
             }
-            tmp[l - 1] = temp;
-            var S = new BitString[1] { Ghash(H, tmp) };
+            for (int i = l - 16; i < l; i++)
+            {
+                tmp[i] = temp[i + 16 - l];
+            }
+            var S = Ghash(H, tmp, l >> 4);
             Y0[12] = 0;
             Y0[13] = 0;
             Y0[14] = 0;
@@ -278,74 +298,77 @@ namespace AES_GCM_cs
             {
                 Y0[i] = IV[i];
             }
-            var T = Gctr(K, Y0, S)[0].Bytes;
-            T = MSB(T, t);
+            Gctr(K, Y0, S,1, 16, T);
             return new(C, T);
         }
 
         // Decryption function
-        public static byte[] AES128GCMd(byte[] IV, byte[] _C, byte[] K, byte[] _A, byte[] _T, uint t)
+        public static byte[] AES128GCMd(byte[] IV, byte[] _C, byte[] K, byte[] _A, byte[] _T)
         {
-            if (_T.Length * 8 - t >= 8 || _T.Length * 8 - t < 0)
+            var last_len_a = (_A.Length % 16 == 0) ? 16 : _A.Length % 16;
+            var last_len_c = (_C.Length % 16 == 0) ? 16 : _C.Length % 16;
+            var len_a = (last_len_a == 16) ? (_A.Length / 16) : (_A.Length / 16 + 1);
+            var len_c = (last_len_c == 16) ? (_C.Length / 16) : (_C.Length / 16 + 1);
+            var P = new byte[_C.Length];
+            var T = new byte[16];
+            var H = aes128.AES128E(new byte[16]
             {
-                Console.WriteLine("FAIL");
-                return ZeroU128;
-            }
-            else
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            }, K).Item1;
+            var Y0 = new byte[16];
+            Y0[12] = 0;
+            Y0[13] = 0;
+            Y0[14] = 0;
+            Y0[15] = 1;
+            for (int i = 0; i < 12; i++)
             {
-                var C = BitString.BytesToBitStrings(_C);
-                var A = BitString.BytesToBitStrings(_A);
-                var H = aes128.AES128E(ZeroU128, K).Item1;
-                var Y0 = new byte[16];
-                Y0[12] = 0;
-                Y0[13] = 0;
-                Y0[14] = 0;
-                Y0[15] = 1;
-                for (int i = 0; i < 12; i++)
-                {
-                    Y0[i] = IV[i];
-                }
-                inc32(Y0);
-                var P = Gctr(K, Y0, C);
-                BitString temp = new(concate_block(len(A), len(C)));
-                var lenA = A.Length;
-                var lenC = C.Length;
-                var l = lenA + lenC + 1;
-                var tmp = new BitString[l];
-                for (int i = 0; i < lenA; i++)
-                {
-                    tmp[i] = A[i];
-                }
-                for (int i = lenA; i < l - 1; i++)
-                {
-                    tmp[i] = C[i - lenA];
-                }
-                tmp[l - 1] = temp;
-                var S = new BitString[1] { Ghash(H, tmp) };
-                Y0[12] = 0;
-                Y0[13] = 0;
-                Y0[14] = 0;
-                Y0[15] = 1;
-                for (int i = 0; i < 12; i++)
-                {
-                    Y0[i] = IV[i];
-                }
-                var T = Gctr(K, Y0, S)[0].Bytes;
-                T = MSB(T, t);
-                for (int i = 0; i < T.Length; i++)
-                {
-                    if (T[i] != _T[i])
-                    {
-                        Console.WriteLine("FAIL");
-                        return ZeroU128;
-                    }
-                }
-                return BitString.BitStringsToBytes(P);
+                Y0[i] = IV[i];
             }
+            inc32(Y0);
+
+            Gctr(K, Y0, _C, len_c, last_len_c, P);
+
+            byte[] temp = concate_block(len(_A), len(_C));
+            len_a <<= 4;
+            len_c <<= 4;
+            var l = len_a + len_c + 16;
+            var tmp = new byte[l];
+            for (int i = 0; i < len_a; i++)
+            {
+                tmp[i] = _A[i];
+            }
+            for (int i = len_a; i < l - 16; i++)
+            {
+                tmp[i] = _C[i - len_a];
+            }
+            for (int i = l - 16; i < l; i++)
+            {
+                tmp[i] = temp[i + 16 - l];
+            }
+            var S = Ghash(H, tmp, l >> 4);
+            Y0[12] = 0;
+            Y0[13] = 0;
+            Y0[14] = 0;
+            Y0[15] = 1;
+            for (int i = 0; i < 12; i++)
+            {
+                Y0[i] = IV[i];
+            }
+            Gctr(K, Y0, S, 1, 16, T);
+
+            for (int i = 0; i < 16; i++)
+            {
+                if (T[i] != _T[i])
+                {
+                    Console.WriteLine("FAIL");
+                    return new byte[1] { 0 };
+                }
+            }
+            return P;
         }
 
         // Return the t most significant bits of X
-        static byte[] MSB(byte[] X, uint t)
+        static byte[] MSB(byte[] X, int t)
         {
             var c = t / 8;
             if (t % 8 != 0)

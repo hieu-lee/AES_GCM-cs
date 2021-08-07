@@ -5,9 +5,9 @@
         public byte[] CipherText;
         public byte[] Tag;
 
-        public GcmOutput(BitString[] _CipherText, byte[] _Tag)
+        public GcmOutput(byte[] _CipherText, byte[] _Tag)
         {
-            CipherText = BitString.BitStringsToBytes(_CipherText);
+            CipherText = _CipherText;
             Tag = _Tag;
         }
     }
