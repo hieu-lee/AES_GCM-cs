@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace AES_GCM_cs
@@ -341,9 +340,9 @@ namespace AES_GCM_cs
             {
                 tmp[i] = _A[i];
             }
-            for (int i = 0; i < 16 - last_len_a; i++)
+            for (int i = _A.Length; i < len_a; i++)
             {
-                tmp[i + _A.Length] = 0;
+                tmp[i] = 0;
             }
             for (int i = len_a; i < len_a + C.Length; i++)
             {
