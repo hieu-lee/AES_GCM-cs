@@ -1,6 +1,7 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using System;
+using System.Text;
 
 namespace AES_GCM_cs
 {
@@ -113,6 +114,33 @@ namespace AES_GCM_cs
             var T = new byte[16];
 
             Aes128GcmAlter.AES128GCM(C, T, K, IV, P, A);
+        }
+
+        static void RunTestAlternative()
+        {
+            Console.WriteLine("Enter the plaintext");
+            var p = Console.ReadLine();
+            var P = Encoding.UTF8.GetBytes(p);
+            Console.WriteLine("Enter the additional data");
+            var a = Console.ReadLine();
+            var A = Encoding.UTF8.GetBytes(a);
+            byte[] K = new byte[16]
+            {
+                0x98,0xff,0xf6,0x7e,0x64,0xe4,0x6b,0xe5,0xee,0x2e,0x05,0xcc,0x9a,0xf6,0xd0,0x12
+            };
+
+            byte[] IV = new byte[12]
+            {
+                0x2d, 0xfb, 0x42, 0x9a, 0x48, 0x69, 0x7c, 0x34, 0x00, 0x6d, 0xa8, 0x86
+            };
+
+            var res = aes128gcm.AES128GCMe(IV, P, A, K);
+            var C = res.CipherText;
+            var T = res.Tag;
+
+            var _p = aes128gcm.AES128GCMd(IV, C, K, A, T);
+            Console.WriteLine("Text after decryption:");
+            Console.WriteLine(Encoding.UTF8.GetString(_p));
         }
 
         static void RunTest()
