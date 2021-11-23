@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace AES_GCM_cs;
 
-namespace AES_GCM_cs
+public struct TupleU128
 {
-    public struct TupleU128
-    {
-        public byte[] Item1 { get; }
-        public byte[] Item2 { get; }
+    public byte[] Item1 { get; }
+    public byte[] Item2 { get; }
 
-        public TupleU128(byte[] _Item1, byte[] _Item2)
-        {
-            Item1 = _Item1;
-            Item2 = _Item2;
-        }
+    public TupleU128(byte[] _Item1, byte[] _Item2)
+    {
+        Item1 = _Item1;
+        Item2 = _Item2;
     }
 }
+
