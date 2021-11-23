@@ -81,7 +81,7 @@ namespace AES_GCM_cs
         static byte[] len(byte[] A)
         {
             byte[] res = new byte[8];
-            int c = A.Length << 3;
+            ulong c = (ulong)(A.Length << 3);
             for (int i = 0; i < 8; i++)
             {
                 res[i] = (byte)((c >> ((7 - i) << 3)) & 0xff);
@@ -95,24 +95,18 @@ namespace AES_GCM_cs
 
             int i, j, lsb;
 
-            byte[] Z = new byte[16] 
-            {
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0,
-                0, 0, 0, 0
-            };
+            byte[] Z = new byte[16];
 
             for (i = 0; i < 16; i++)
             {
-                V[i] = X[i];
+                V[i] = Y[i];
             }
 
             for (i = 0; i < 16; i++)
             {
                 for (j = 0; j < 8; j++)
                 {
-                    if ((Y[i] >> (7 - j)) == 1)
+                    if (((X[i] >> (7 - j)) & 1) == 1)
                     {
                         xor_block(Z, V);
                     }

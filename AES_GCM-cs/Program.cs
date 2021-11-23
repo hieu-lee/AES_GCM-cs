@@ -139,7 +139,7 @@ namespace AES_GCM_cs
             var T = res.Tag;
 
             var _p = aes128gcm.AES128GCMd(IV, C, K, A, T);
-            Console.WriteLine("Text after decryption:");
+            Console.WriteLine("\nText after decryption:");
             Console.WriteLine(Encoding.UTF8.GetString(_p));
         }
 
@@ -175,10 +175,22 @@ namespace AES_GCM_cs
             return;
         }
 
+        static void PrintArray(byte[] arr)
+        {
+            string[] Arr = new string[arr.Length];
+            for (int i = 0; i < arr.Length; i++)
+            {
+                Arr[i] = arr[i].ToString();
+            }
+            var c = string.Join(' ', Arr);
+            Console.WriteLine(c);
+        }
+
         // Uncomment the line RunTest() to see some test results
         static void Main(string[] args)
         {
             RunTest();
+            // RunTestAlternative();
         }
     }
 }
