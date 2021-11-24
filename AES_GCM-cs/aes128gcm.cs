@@ -331,20 +331,11 @@ class aes128gcm
         {
             tmp[i] = _A[i];
         }
-        for (int i = _A.Length; i < len_a; i++)
-        {
-            tmp[i] = 0;
-        }
         for (int i = len_a; i < len_a + C.Length; i++)
         {
             tmp[i] = C[i - len_a];
         }
-        var c = len_a + C.Length;
-        for (int i = 0; i < 16 - last_len_p; i++)
-        {
-            tmp[i + c] = 0;
-        }
-        c = l - 16;
+        var c = l - 16;
         for (int i = c; i < l; i++)
         {
             tmp[i] = temp[i - c];
@@ -397,21 +388,14 @@ class aes128gcm
         {
             tmp[i] = _A[i];
         }
-        for (int i = 0; i < 16 - last_len_a; i++)
-        {
-            tmp[i + _A.Length] = 0;
-        }
         for (int i = len_a; i < len_a + _C.Length; i++)
         {
             tmp[i] = _C[i - len_a];
         }
-        for (int i = 0; i < 16 - last_len_c; i++)
+        var c = l - 16;
+        for (int i = c; i < l; i++)
         {
-            tmp[i + len_a + _C.Length] = 0;
-        }
-        for (int i = l - 16; i < l; i++)
-        {
-            tmp[i] = temp[i + 16 - l];
+            tmp[i] = temp[i - c];
         }
         var S = Ghash(H, tmp, l >> 4);
         Y0[12] = 0;
