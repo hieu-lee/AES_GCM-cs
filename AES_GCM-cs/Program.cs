@@ -5,6 +5,6 @@ public class Program
     static void Main(string[] args)
     {
         // TestFunctions.RunTest();
-        // TestFunctions.RunTestAlternative();
+        TestFunctions.RunTestAlternative();
     }
 }
