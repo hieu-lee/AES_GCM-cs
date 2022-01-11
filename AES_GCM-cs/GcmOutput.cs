@@ -1,6 +1,6 @@
 ﻿namespace AES_GCM_cs;
 
-struct GcmOutput
+unsafe struct GcmOutput
 {
     public byte[] CipherText;
     public byte[] Tag;
