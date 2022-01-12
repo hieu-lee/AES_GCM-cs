@@ -387,7 +387,7 @@ unsafe class aes128gcm
         for (int i = 0; i < 12; i++)
         {
             *Y0 = IV[i];
-            Y00++;
+            Y0++;
         }
         Gctr128(K, Y0, S, T);
         return new(C, T);
