@@ -119,6 +119,25 @@ unsafe class aes128gcm
         }
     }
 
+    static void concate_block_ptr(byte *a, byte *b, byte *output)
+    {
+        int i = 0;
+        while (i < 8)
+        {
+            *output = *a;
+            output++;
+            a++;
+            i++;
+        }
+        while (i < 16)
+        {
+            *output = *b;
+            output++;
+            b++;
+            i++;
+        }
+    }
+
     // Return the concatenation of two array
     static T[] concate_block<T>(T[] a, T[] b)
     {
@@ -145,6 +164,16 @@ unsafe class aes128gcm
             res[i] = (byte)((c >> ((7 - i) << 3)) & 0xff);
         }
         return res;
+    }
+
+    static void lenU64(byte[] A, byte *output)
+    {
+        ulong c = (ulong)(A.Length << 3);
+        for (int i = 0; i < 8; i++)
+        {
+            *output = (byte)((c >> ((7 - i) << 3)) & 0xff);
+            output++;
+        }
     }
 
     static byte[] g_mult(byte[] X, byte[] Y)
@@ -204,6 +233,21 @@ unsafe class aes128gcm
             Y = g_mult(Y, H);
         }
         return Y;
+    }
+
+    static void Gctr128(byte[] K, byte* ICB, byte[] X, byte *Tag)
+    {
+        int i;
+        byte[] tmp;
+        var CB = new byte[16];
+        CopyToArray128(ICB, CB);
+
+        tmp = aes128.AES128E(CB, K).Item1;
+        for (i = 0; i < 16; i++)
+        {
+            *Tag= (byte)(tmp[i] ^ X[i]);
+            Tag++;
+        }
     }
 
     static void Gctr(byte[] K, byte *ICB, byte[] X, int len_X, int last_len_X, byte[] Cipher)
@@ -327,8 +371,12 @@ unsafe class aes128gcm
         }
         inc32Ptr(Y0);
         Gctr(K, Y0, _P, len_p, last_len_p, C);
-
-        byte[] temp = concate_block(len(_A), len(C));
+        var len_A_u64 = stackalloc byte[8];
+        var len_C_u64 = stackalloc byte[8];
+        lenU64(_A, len_A_u64);
+        lenU64(C, len_C_u64);
+        var temp = stackalloc byte[16];
+        concate_block_ptr(len_A_u64, len_C_u64, temp);
         len_a <<= 4;
         len_p <<= 4;
         var l = len_a + len_p + 16;
@@ -367,7 +415,7 @@ unsafe class aes128gcm
         var len_a = (last_len_a == 16) ? (_A.Length >> 4) : ((_A.Length >> 4) + 1);
         var len_c = (last_len_c == 16) ? (_C.Length >> 4) : ((_C.Length >> 4) + 1);
         var P = new byte[_C.Length];
-        var T = new byte[16];
+        var T = stackalloc byte[16];
         var H = aes128.AES128E(new byte[16]
         {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -412,7 +460,7 @@ unsafe class aes128gcm
         {
             Y0[i] = IV[i];
         }
-        Gctr(K, Y0, S, 1, 16, T);
+        Gctr128(K, Y0, S, T);
 
         for (int i = 0; i < 16; i++)
         {
