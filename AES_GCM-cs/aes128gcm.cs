@@ -119,21 +119,20 @@ unsafe class aes128gcm
         }
     }
 
-    static void concate_block_ptr(byte *a, byte *b, byte *output)
+    static void concate_block_ptr(byte[] a, byte[] b, byte *output)
     {
         int i = 0;
         while (i < 8)
         {
-            *output = *a;
+            *output = a[i];
             output++;
-            a++;
             i++;
         }
-        while (i < 16)
+        i = 0;
+        while (i < 8)
         {
-            *output = *b;
+            *output = b[i];
             output++;
-            b++;
             i++;
         }
     }
@@ -164,16 +163,6 @@ unsafe class aes128gcm
             res[i] = (byte)((c >> ((7 - i) << 3)) & 0xff);
         }
         return res;
-    }
-
-    static void lenU64(byte[] A, byte *output)
-    {
-        ulong c = (ulong)(A.Length << 3);
-        for (int i = 0; i < 8; i++)
-        {
-            *output = (byte)((c >> ((7 - i) << 3)) & 0xff);
-            output++;
-        }
     }
 
     static byte[] g_mult(byte[] X, byte[] Y)
@@ -355,7 +344,7 @@ unsafe class aes128gcm
         var len_a = (last_len_a == 16) ? (_A.Length >> 4) : ((_A.Length >> 4) + 1);
         var len_p = (last_len_p == 16) ? (_P.Length >> 4) : ((_P.Length >> 4) + 1);
         var C = new byte[_P.Length];
-        var T = new byte[16];
+        var T = stackalloc byte[16];
         var H = aes128.AES128E(new byte[16]
         {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -371,12 +360,8 @@ unsafe class aes128gcm
         }
         inc32Ptr(Y0);
         Gctr(K, Y0, _P, len_p, last_len_p, C);
-        var len_A_u64 = stackalloc byte[8];
-        var len_C_u64 = stackalloc byte[8];
-        lenU64(_A, len_A_u64);
-        lenU64(C, len_C_u64);
         var temp = stackalloc byte[16];
-        concate_block_ptr(len_A_u64, len_C_u64, temp);
+        concate_block_ptr(len(_A), len(C), temp);
         len_a <<= 4;
         len_p <<= 4;
         var l = len_a + len_p + 16;
@@ -401,9 +386,10 @@ unsafe class aes128gcm
         Y0[15] = 1;
         for (int i = 0; i < 12; i++)
         {
-            Y0[i] = IV[i];
+            *Y0 = IV[i];
+            Y00++;
         }
-        Gctr(K, Y0, S, 1, 16, T);
+        Gctr128(K, Y0, S, T);
         return new(C, T);
     }
 
@@ -433,12 +419,8 @@ unsafe class aes128gcm
 
         Gctr(K, Y0, _C, len_c, last_len_c, P);
 
-        var len_A_u64 = stackalloc byte[8];
-        var len_C_u64 = stackalloc byte[8];
-        lenU64(_A, len_A_u64);
-        lenU64(_C, len_C_u64);
         var temp = stackalloc byte[16];
-        concate_block_ptr(len_A_u64, len_C_u64, temp);
+        concate_block_ptr(len(_A), len(_C), temp);
         len_a <<= 4;
         len_c <<= 4;
         var l = len_a + len_c + 16;
@@ -463,7 +445,8 @@ unsafe class aes128gcm
         Y0[15] = 1;
         for (int i = 0; i < 12; i++)
         {
-            Y0[i] = IV[i];
+            *Y0 = IV[i];
+            Y0++;
         }
         Gctr128(K, Y0, S, T);
 
