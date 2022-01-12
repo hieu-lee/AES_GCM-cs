@@ -433,7 +433,12 @@ unsafe class aes128gcm
 
         Gctr(K, Y0, _C, len_c, last_len_c, P);
 
-        byte[] temp = concate_block(len(_A), len(_C));
+        var len_A_u64 = stackalloc byte[8];
+        var len_C_u64 = stackalloc byte[8];
+        lenU64(_A, len_A_u64);
+        lenU64(_C, len_C_u64);
+        var temp = stackalloc byte[16];
+        concate_block_ptr(len_A_u64, len_C_u64, temp);
         len_a <<= 4;
         len_c <<= 4;
         var l = len_a + len_c + 16;
