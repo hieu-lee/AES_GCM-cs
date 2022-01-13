@@ -6,7 +6,7 @@ public class TestFunctions
     Random rng = new Random();
     byte[] K = new byte[16];
     byte[] IV = new byte[12];
-    byte[] P = new byte[50000];
+    byte[] P = new byte[1000000];
     byte[] A = new byte[24];
 
     //public TestFunctions()
