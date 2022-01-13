@@ -1,7 +1,7 @@
 ﻿namespace AES_GCM_cs;
 
 // My own implementation of AES128 after reading stuffs
-class aes128
+unsafe class aes128
 {
 
     static readonly byte[] SBox = new byte[256]
@@ -54,92 +54,69 @@ class aes128
         return (byte)(((a & 0x80) != 0) ? ((a << 1) ^ 0x1b) : (a << 1));
     }
 
-
-    static void SubBytes(byte[] state)
+    static void SubAndShiftRows(byte* state)
     {
-        for (int i = 0; i < 16; i++)
+        int i = 0;
+        var temp = stackalloc byte[16]
         {
-            state[i] = SBox[state[i]];
-        }
-    }
-
-    static void InvSubBytes(byte[] state)
-    {
-        for (int i = 0; i < 16; i++)
-        {
-            state[i] = InvSBox[state[i]];
-        }
-    }
-
-    static void SubAndShiftRows(byte[] state)
-    {
-        var temp = new byte[16]
-        {
-            SBox[state[0]], SBox[state[5]], SBox[state[10]], SBox[state[15]],
-            SBox[state[4]], SBox[state[9]], SBox[state[14]], SBox[state[3]],
-            SBox[state[8]], SBox[state[13]], SBox[state[2]], SBox[state[7]],
-            SBox[state[12]], SBox[state[1]], SBox[state[6]], SBox[state[11]]
+            SBox[state[0]],
+            SBox[state[5]],
+            SBox[state[10]],
+            SBox[state[15]],
+            SBox[state[4]],
+            SBox[state[9]],
+            SBox[state[14]],
+            SBox[state[3]],
+            SBox[state[8]],
+            SBox[state[13]],
+            SBox[state[2]],
+            SBox[state[7]],
+            SBox[state[12]],
+            SBox[state[1]],
+            SBox[state[6]],
+            SBox[state[11]]
         };
-        for (int i = 0; i < 16; i++)
+        while (i < 16)
         {
-            state[i] = temp[i];
+            *state = *temp;
+            state++;
+            temp++;
+            i++;
         }
     }
 
-    static void InvSubAndShiftRows(byte[] state)
+    static void InvSubAndShiftRows(byte* state)
     {
-        var temp = new byte[16]
+        int i = 0;
+        var temp = stackalloc byte[16]
         {
-            InvSBox[state[0]], InvSBox[state[13]], InvSBox[state[10]], InvSBox[state[7]],
-            InvSBox[state[4]], InvSBox[state[1]], InvSBox[state[14]], InvSBox[state[11]],
-            InvSBox[state[8]], InvSBox[state[5]], InvSBox[state[2]], InvSBox[state[15]],
-            InvSBox[state[12]], InvSBox[state[9]], InvSBox[state[6]], InvSBox[state[3]]
+            InvSBox[state[0]],
+            InvSBox[state[13]],
+            InvSBox[state[10]],
+            InvSBox[state[7]],
+            InvSBox[state[4]],
+            InvSBox[state[1]],
+            InvSBox[state[14]],
+            InvSBox[state[11]],
+            InvSBox[state[8]],
+            InvSBox[state[5]],
+            InvSBox[state[2]],
+            InvSBox[state[15]],
+            InvSBox[state[12]],
+            InvSBox[state[9]],
+            InvSBox[state[6]],
+            InvSBox[state[3]]
         };
-        for (int i = 0; i < 16; i++)
+        while (i < 16)
         {
-            state[i] = temp[i];
+            *state = *temp;
+            state++;
+            temp++;
+            i++;
         }
     }
 
-    static void ShiftRows(byte[] state)
-    {
-        byte[] tmp;
-        for (int i = 1; i < 4; i++)
-        {
-            tmp = new byte[4]
-            {
-                state[i],
-                state[4 + i],
-                state[8 + i],
-                state[12 + i],
-            };
-            state[i] = tmp[i % 4];
-            state[4 + i] = tmp[(i + 1) % 4];
-            state[8 + i] = tmp[(i + 2) % 4];
-            state[12 + i] = tmp[(i + 3) % 4];
-        }
-    }
-
-    static void InvShiftRows(byte[] state)
-    {
-        byte[] tmp;
-        for (int i = 1; i < 4; i++)
-        {
-            tmp = new byte[4]
-            {
-                state[i],
-                state[4 + i],
-                state[8 + i],
-                state[12 + i],
-            };
-            state[i] = tmp[(4 - i) % 4];
-            state[4 + i] = tmp[(5 - i) % 4];
-            state[8 + i] = tmp[(6 - i) % 4];
-            state[12 + i] = tmp[(7 - i) % 4];
-        }
-    }
-
-    static void MixColumns(byte[] state)
+    static void MixColumns(byte* state)
     {
         byte t, u;
         int i;
@@ -156,7 +133,7 @@ class aes128
         }
     }
 
-    static void InvMixColumns(byte[] state)
+    static void InvMixColumns(byte* state)
     {
         byte u, v;
         int i;
@@ -164,73 +141,96 @@ class aes128
         for (i = 0; i < 4; i++)
         {
             c = i << 2;
-            u = XTime(XTime((byte)(state[c] ^ state[c + 2])));
-            v = XTime(XTime((byte)(state[c + 1] ^ state[c + 3])));
-            state[c] ^= u;
-            state[c + 1] ^= v;
-            state[c + 2] ^= u;
-            state[c + 3] ^= v;
+            var ptr = state + c;
+            u = XTime(XTime((byte)(*ptr ^ *(ptr + 2))));
+            v = XTime(XTime((byte)(*(ptr + 1) ^ *(ptr + 3))));
+            *ptr ^= u;
+            ptr++;
+            *ptr ^= v;
+            ptr++;
+            *ptr ^= u;
+            ptr++;
+            *ptr ^= v;
         }
         MixColumns(state);
     }
 
-    static void AddRoundKey(byte[] state, byte[] RoundKey)
+    static void AddRoundKey(byte* state, byte* RoundKey)
     {
-        for (int i = 0; i < 16; i++)
+        var c = 0;
+        while (c < 16)
         {
-            state[i] ^= RoundKey[i];
+            *state ^= *RoundKey;
+            state++;
+            RoundKey++;
+            c++;
         }
     }
 
-    static byte[] KeyExpansion(byte[] RoundKey, int round)
+    static void KeyExpansion(byte* RoundKey, int round)
     {
-        var res = new byte[16];
-        var temp = new byte[4]
+        var res = stackalloc byte[16];
+        var temp = stackalloc byte[4]
         {
-            SBox[RoundKey[13]],
-            SBox[RoundKey[14]],
-            SBox[RoundKey[15]],
-            SBox[RoundKey[12]]
+            SBox[*(RoundKey + 13)],
+            SBox[*(RoundKey + 14)],
+            SBox[*(RoundKey + 15)],
+            SBox[*(RoundKey + 12)]
         };
-        for (int j = 0; j < 4; j++)
+        int i = 0;
+        var ptr = res;
+        while (i < 4)
         {
-            res[j] = (byte)(temp[j] ^ RoundKey[j]);
+            *ptr = (byte)(*temp ^ *RoundKey);
+            ptr++;
+            temp++;
+            RoundKey++;
+            i++;
         }
-        res[0] ^= RCon[round - 1];
-        for (int i = 4; i < 16; i++)
+        *res ^= RCon[round - 1];
+        while (i < 16)
         {
-            res[i] = (byte)(res[i - 4] ^ RoundKey[i]);
+            *ptr = (byte)(*(ptr - 4) ^ *RoundKey);
+            ptr++;
+            RoundKey++;
+            i++;
         }
-        return res;
+        RoundKey = res;
     }
 
-    static byte[] InvKeyExpansion(byte[] RoundKey, int round)
+    static void InvKeyExpansion(byte* RoundKey, int round)
     {
-        var res = new byte[16];
+        var res = stackalloc byte[16];
+        var ptr = res + 4;
         for (int i = 4; i < 16; i++)
         {
-            res[i] = (byte)(RoundKey[i] ^ RoundKey[i - 4]);
+            *ptr = (byte)(RoundKey[i] ^ RoundKey[i - 4]);
+            ptr++;
         }
-        var temp = new byte[4]
+        var temp = stackalloc byte[4]
         {
             SBox[res[13]],
             SBox[res[14]],
             SBox[res[15]],
             SBox[res[12]]
         };
+        ptr = res;
         for (int j = 0; j < 4; j++)
         {
-            res[j] = (byte)(RoundKey[j] ^ temp[j]);
+            *ptr = (byte)(*RoundKey ^ *temp);
+            RoundKey++;
+            ptr++;
+            temp++;
         }
-        res[0] ^= RCon[10 - round];
-        return res;
+        *res ^= RCon[10 - round];
+        RoundKey = res;
     }
 
     // AES128 encryption function 
     public static TupleU128 AES128E(byte[] input, byte[] key)
     {
-        var state = new byte[16];
-        var RoundKey = new byte[16];
+        var state = stackalloc byte[16];
+        var RoundKey = stackalloc byte[16];
         for (int i = 0; i < 16; i++)
         {
             RoundKey[i] = key[i];
@@ -240,16 +240,12 @@ class aes128
 
         for (var round = 1; round < 10; round++)
         {
-            RoundKey = KeyExpansion(RoundKey, round);
-            //SubBytes(state);
-            //ShiftRows(state);
+            KeyExpansion(RoundKey, round);
             SubAndShiftRows(state);
             MixColumns(state);
             AddRoundKey(state, RoundKey);
         }
-        RoundKey = KeyExpansion(RoundKey, 10);
-        //SubBytes(state);
-        //ShiftRows(state);
+        KeyExpansion(RoundKey, 10);
         SubAndShiftRows(state);
         AddRoundKey(state, RoundKey);
         return new(state, RoundKey);
@@ -258,8 +254,8 @@ class aes128
     // AES128 decryption function
     public static TupleU128 AES128D(byte[] CipherText, byte[] key)
     {
-        var state = new byte[16];
-        var RoundKey = new byte[16];
+        var state = stackalloc byte[16];
+        var RoundKey = stackalloc byte[16];
         for (int i = 0; i < 16; i++)
         {
             RoundKey[i] = key[i];
@@ -267,34 +263,16 @@ class aes128
         }
         AddRoundKey(state, RoundKey);
         InvSubAndShiftRows(state);
-        //InvShiftRows(state);
-        //InvSubBytes(state);
-        RoundKey = InvKeyExpansion(RoundKey, 1);
+        InvKeyExpansion(RoundKey, 1);
         for (var round = 2; round < 11; round++)
         {
             AddRoundKey(state, RoundKey);
             InvMixColumns(state);
             InvSubAndShiftRows(state);
-            //InvShiftRows(state);
-            //InvSubBytes(state);
-            RoundKey = InvKeyExpansion(RoundKey, round);
+            InvKeyExpansion(RoundKey, round);
         }
         AddRoundKey(state, RoundKey);
         return new(state, RoundKey);
-    }
-
-    static void PrintMatrix(byte[,] matrix)
-    {
-        var s = "[";
-        for (int i = 0; i < 4; i++)
-        {
-            for (int j = 0; j < 4; j++)
-            {
-                s += $"{matrix[i, j]}, ";
-            }
-        }
-        s += "]";
-        Console.WriteLine(s);
     }
 
     static void PrintArray(byte[] array)

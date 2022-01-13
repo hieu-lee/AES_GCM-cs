@@ -6,7 +6,7 @@ public class TestFunctions
     Random rng = new Random();
     byte[] K = new byte[16];
     byte[] IV = new byte[12];
-    byte[] P = new byte[50000];
+    byte[] P = new byte[1000000];
     byte[] A = new byte[24];
 
     //public TestFunctions()
@@ -35,20 +35,6 @@ public class TestFunctions
         aes128.AES128E(Input, Key);
     }
 
-    public void TheirAES()
-    {
-        var Key = new byte[16];
-
-        rng.NextBytes(Key);
-
-        var Input = new byte[16];
-
-        rng.NextBytes(Input);
-
-        var C = new byte[16];
-        aes128e.AES128E(Input, Key, C);
-    }
-
     [Benchmark]
     public void MyGCM()
     {
@@ -57,17 +43,6 @@ public class TestFunctions
         rng.NextBytes(P);
         rng.NextBytes(A);
         _ = aes128gcm.AES128GCMe(IV, P, A, K);
-    }
-
-    public void TheirGCM()
-    {
-        rng.NextBytes(K);
-        rng.NextBytes(IV);
-        rng.NextBytes(P);
-        rng.NextBytes(A);
-        var C = new byte[P.Length];
-        var T = new byte[16];
-        Aes128GcmAlter.AES128GCM(C, T, K, IV, P, A);
     }
 
     public static void RunTest()
