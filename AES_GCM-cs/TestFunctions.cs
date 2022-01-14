@@ -51,7 +51,7 @@ public class TestFunctions
         Console.WriteLine("What do you want to see?");
         Console.WriteLine("1. Test result of AES128");
         Console.WriteLine("2. Test result of AES128GCM");
-        Console.WriteLine("3. Performance of my AES128GCM implementation (encrypt 50kb of data)");
+        Console.WriteLine("3. Performance of my AES128GCM implementation (encrypt 1mb of data)");
         Console.Write("Choose a number from 1 to 3: ");
         var s = Console.ReadLine();
         s = s.Trim();
@@ -64,7 +64,7 @@ public class TestFunctions
                 aes128gcm.Test();
                 break;
             case "3":
-                var summary = BenchmarkRunner.Run<TestFunctions>();
+                var _ = BenchmarkRunner.Run<TestFunctions>();
                 break;
             default:
                 Console.WriteLine("Unidentified choice, the program is shutting down...");
