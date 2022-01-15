@@ -166,43 +166,37 @@ unsafe class aes128
     static void KeyExpansion(byte* RoundKey, int round)
     {
         var res = stackalloc byte[16];
+        var RoundKeyCopy = RoundKey;
         var temp = stackalloc byte[4]
         {
-            SBox[*(RoundKey + 13)],
-            SBox[*(RoundKey + 14)],
-            SBox[*(RoundKey + 15)],
-            SBox[*(RoundKey + 12)]
+            SBox[RoundKey[13]],
+            SBox[RoundKey[14]],
+            SBox[RoundKey[15]],
+            SBox[RoundKey[12]]
         };
-        int i = 4;
-        var ptr = res;
-        *(uint*)ptr = *(uint*)temp ^ *(uint*)RoundKey;
-        //while (i < 4)
-        //{
-        //    *ptr = (byte)(*temp ^ *RoundKey);
-        //    ptr++;
-        //    temp++;
-        //    RoundKey++;
-        //    i++;
-        //}
+        *(uint*)res = *(uint*)temp ^ *(uint*)RoundKey;
+        var ptr = res + 4;
+        RoundKey += 4;
         *res ^= RCon[round - 1];
-        while (i < 16)
+        for (int i = 4; i < 16; i++)
         {
             *ptr = (byte)(*(ptr - 4) ^ *RoundKey);
             ptr++;
             RoundKey++;
-            i++;
         }
-        U128Copy(res, RoundKey);
+        U128Copy(res, RoundKeyCopy);
     }
 
     static void InvKeyExpansion(byte* RoundKey, int round)
     {
         var res = stackalloc byte[16];
         var ptr = res + 4;
+        var RoundKeyCopy = RoundKey;
         for (int i = 4; i < 16; i++)
         {
-            *ptr = (byte)(RoundKey[i] ^ RoundKey[i - 4]);
+            *ptr = (byte)(*RoundKey ^ *(RoundKey + 4));
             ptr++;
+            RoundKey++;
         }
         var temp = stackalloc byte[4]
         {
@@ -211,17 +205,9 @@ unsafe class aes128
             SBox[res[15]],
             SBox[res[12]]
         };
-        ptr = res;
-        *(uint*)ptr = *(uint*)RoundKey ^ *(uint*)temp;
-        //for (int j = 0; j < 4; j++)
-        //{
-        //    *ptr = (byte)(*RoundKey ^ *temp);
-        //    RoundKey++;
-        //    ptr++;
-        //    temp++;
-        //}
-        *res ^= RCon[10 - round];
-        U128Copy(res, RoundKey);
+        *(uint*)res = *(uint*)temp ^ *(uint*)RoundKeyCopy;
+        res[0] ^= RCon[10 - round];
+        U128Copy(res, RoundKeyCopy);
     }
 
     // AES128 encryption function 
