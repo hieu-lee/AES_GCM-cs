@@ -8,23 +8,25 @@ unsafe class aes128gcm
 
     static void CopyToArray128(byte* src, byte[] dst)
     {
-        int i = 0;
-        while (i < 16)
+        fixed (byte* dst_ptr = dst)
         {
-            dst[i] = *src;
-            src++;
-            i++;
+            var scan = (ulong*)dst_ptr;
+            *scan = *(ulong*)src;
+            scan++;
+            src += 8;
+            *scan = *(ulong*)src;
         }
     }
 
     static void CopyToPtr128(byte[] src, byte* dst)
     {
-        int i = 0;
-        while (i < 16)
+        fixed (byte* src_ptr = src)
         {
-            *dst = src[i];
-            dst++;
-            i++;
+            var scan = (ulong*)src_ptr;
+            *(ulong*)dst = *scan;
+            scan++;
+            dst += 8;
+            *(ulong*)dst = *scan;
         }
     }
 
@@ -88,23 +90,14 @@ unsafe class aes128gcm
 
     public static void right_shift(byte *v)
     {
-        int i = 1;
-        int lowestBit, highestBit;
-        lowestBit = *v & 1;
-        *v >>= 1;
-        highestBit = lowestBit;
-        v++;
-        while (i < 16)
+        var v_long = (ulong*)v;
+        var highestBit = *v_long & 1;
+        *v_long >>= 1;
+        v_long++;
+        *v_long >>= 1;
+        if (highestBit != 0)
         {
-            lowestBit = *v & 1;
-            *v >>= 1;
-            if (highestBit == 1)
-            {
-                *v |= (1 << 7);
-            }
-            highestBit = lowestBit;
-            v++;
-            i++;
+            *v_long |= (highestBit << 63);
         }
     }
 
