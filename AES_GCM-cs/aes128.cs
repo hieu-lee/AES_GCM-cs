@@ -54,6 +54,16 @@ unsafe class aes128
         return (byte)(((a & 0x80) != 0) ? ((a << 1) ^ 0x1b) : (a << 1));
     }
 
+    static void U128Copy(byte* src, byte* dst)
+    {
+        var srcLong = (ulong*)src;
+        var dstLong = (ulong*)dst;
+        *dstLong = *srcLong;
+        dstLong++;
+        srcLong++;
+        *dstLong = *srcLong;
+    }
+
     static void SubAndShiftRows(byte* state)
     {
         int i = 0;
@@ -76,13 +86,7 @@ unsafe class aes128
             SBox[state[6]],
             SBox[state[11]]
         };
-        while (i < 16)
-        {
-            *state = *temp;
-            state++;
-            temp++;
-            i++;
-        }
+        U128Copy(temp, state);
     }
 
     static void InvSubAndShiftRows(byte* state)
@@ -107,13 +111,7 @@ unsafe class aes128
             InvSBox[state[6]],
             InvSBox[state[3]]
         };
-        while (i < 16)
-        {
-            *state = *temp;
-            state++;
-            temp++;
-            i++;
-        }
+        U128Copy(temp, state);
     }
 
     static void MixColumns(byte* state)
@@ -157,14 +155,12 @@ unsafe class aes128
 
     static void AddRoundKey(byte* state, byte* RoundKey)
     {
-        var c = 0;
-        while (c < 16)
-        {
-            *state ^= *RoundKey;
-            state++;
-            RoundKey++;
-            c++;
-        }
+        var stateLong = (ulong*)state;
+        var RoundKeyLong = (ulong*)RoundKey;
+        *stateLong ^= *RoundKeyLong;
+        stateLong++;
+        RoundKeyLong++;
+        *stateLong ^= *RoundKeyLong;
     }
 
     static void KeyExpansion(byte* RoundKey, int round)
@@ -177,16 +173,17 @@ unsafe class aes128
             SBox[*(RoundKey + 15)],
             SBox[*(RoundKey + 12)]
         };
-        int i = 0;
+        int i = 4;
         var ptr = res;
-        while (i < 4)
-        {
-            *ptr = (byte)(*temp ^ *RoundKey);
-            ptr++;
-            temp++;
-            RoundKey++;
-            i++;
-        }
+        *(uint*)ptr = *(uint*)temp ^ *(uint*)RoundKey;
+        //while (i < 4)
+        //{
+        //    *ptr = (byte)(*temp ^ *RoundKey);
+        //    ptr++;
+        //    temp++;
+        //    RoundKey++;
+        //    i++;
+        //}
         *res ^= RCon[round - 1];
         while (i < 16)
         {
@@ -195,7 +192,7 @@ unsafe class aes128
             RoundKey++;
             i++;
         }
-        RoundKey = res;
+        U128Copy(res, RoundKey);
     }
 
     static void InvKeyExpansion(byte* RoundKey, int round)
@@ -215,15 +212,16 @@ unsafe class aes128
             SBox[res[12]]
         };
         ptr = res;
-        for (int j = 0; j < 4; j++)
-        {
-            *ptr = (byte)(*RoundKey ^ *temp);
-            RoundKey++;
-            ptr++;
-            temp++;
-        }
+        *(uint*)ptr = *(uint*)RoundKey ^ *(uint*)temp;
+        //for (int j = 0; j < 4; j++)
+        //{
+        //    *ptr = (byte)(*RoundKey ^ *temp);
+        //    RoundKey++;
+        //    ptr++;
+        //    temp++;
+        //}
         *res ^= RCon[10 - round];
-        RoundKey = res;
+        U128Copy(res, RoundKey);
     }
 
     // AES128 encryption function 

@@ -28,6 +28,16 @@ unsafe class aes128gcm
         }
     }
 
+    static void U128Copy(byte *src, byte *dst)
+    {
+        var srcLong = (ulong*)src;
+        var dstLong = (ulong*)dst;
+        *dstLong = *srcLong;
+        dstLong++;
+        srcLong++;
+        *dstLong = *srcLong;
+    }
+
     static void inc32Ptr(byte *x)
     {
         int lsb = 0;
@@ -100,52 +110,20 @@ unsafe class aes128gcm
 
     static void xor_block_128(byte *dst, byte *src)
     {
-        int i = 0;
-        while (i < 16)
-        {
-            *dst ^= *src;
-            dst++;
-            src++;
-            i++;
-        }
+        var dst_long = (ulong*)dst;
+        var src_long = (ulong*)src;
+        *dst_long ^= *src_long;
+        dst_long++;
+        src_long++;
+        *dst_long ^= *src_long;
     }
 
-    static void xor_block(byte[] dst, byte[] src, int length = 16)
+    static void concate_block(ulong LengthA, ulong LengthB, byte *output)
     {
-        int i;
-        for (i = 0; i < length; i++)
-        {
-            dst[i] ^= src[i];
-        }
-    }
-
-    static void concate_block_ptr(byte[] a, byte[] b, byte *output)
-    {
-        int i = 0;
-        while (i < 8)
-        {
-            *output = a[i];
-            output++;
-            i++;
-        }
-        i = 0;
-        while (i < 8)
-        {
-            *output = b[i];
-            output++;
-            i++;
-        }
-    }
-
-    static byte[] len(ulong ArrLength)
-    {
-        byte[] res = new byte[8];
-        ulong c = (ulong)(ArrLength << 3);
-        for (int i = 0; i < 8; i++)
-        {
-            res[i] = (byte)((c >> ((7 - i) << 3)) & 0xff);
-        }
-        return res;
+        var pOutput = (ulong*)output;
+        *pOutput = LengthA;
+        pOutput++;
+        *pOutput = LengthB;
     }
 
     static void g_mult(byte *X, byte *Y, byte *output)
@@ -155,12 +133,8 @@ unsafe class aes128gcm
         int i, j, lsb;
 
         var Z = stackalloc byte[16];
-        var res = new byte[16];
 
-        for (i = 0; i < 16; i++)
-        {
-            V[i] = Y[i];
-        }
+        U128Copy(Y, V);
 
         for (i = 0; i < 16; i++)
         {
@@ -181,12 +155,7 @@ unsafe class aes128gcm
             X++;
         }
 
-        for (i = 0; i < 16; i++)
-        {
-            *output = *Z;
-            output++;
-            Z++;
-        }
+        U128Copy(output, Z);
     }
 
     static void Ghash(byte *H, byte[] X, int len_X, byte *output)
@@ -210,12 +179,8 @@ unsafe class aes128gcm
             xor_block_128(Y, temp);
             g_mult(Y, H, Y);
         }
-        for (int i = 0; i < 16; i++)
-        {
-            *output = *Y;
-            output++;
-            Y++;
-        }
+
+        U128Copy(Y, output);
     }
 
     static void Gctr128(byte[] K, byte* ICB, byte *X, byte *Tag)
@@ -356,7 +321,7 @@ unsafe class aes128gcm
         inc32Ptr(Y0);
         Gctr(K, Y0, _P, len_p, last_len_p, C);
         var temp = stackalloc byte[16];
-        concate_block_ptr(len((ulong)_A.Length), len((ulong)C.Length), temp);
+        concate_block((ulong)_A.Length, (ulong)C.Length, temp);
         len_a <<= 4;
         len_p <<= 4;
         var l = len_a + len_p + 16;
@@ -417,7 +382,7 @@ unsafe class aes128gcm
         Gctr(K, Y0, _C, len_c, last_len_c, P);
 
         var temp = stackalloc byte[16];
-        concate_block_ptr(len((ulong)_A.Length), len((ulong)_C.Length), temp);
+        concate_block((ulong)_A.Length, (ulong)_C.Length, temp);
         len_a <<= 4;
         len_c <<= 4;
         var l = len_a + len_c + 16;
