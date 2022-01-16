@@ -9,18 +9,6 @@ public class TestFunctions
     byte[] P = new byte[1000000];
     byte[] A = new byte[24];
 
-    //public TestFunctions()
-    //{
-    //    rng.NextBytes(K);
-    //    rng.NextBytes(IV);
-    //    var p = rng.Next(5000000, 10000000);
-    //    P = new byte[p];
-    //    rng.NextBytes(P);
-    //    var a = rng.Next(5000, 10000);
-    //    A = new byte[a];
-    //    rng.NextBytes(A);
-    //}
-
     [Benchmark]
     public void MyAES()
     {

@@ -66,7 +66,6 @@ unsafe class aes128
 
     static void SubAndShiftRows(byte* state)
     {
-        int i = 0;
         var temp = stackalloc byte[16]
         {
             SBox[state[0]],
@@ -91,7 +90,6 @@ unsafe class aes128
 
     static void InvSubAndShiftRows(byte* state)
     {
-        int i = 0;
         var temp = stackalloc byte[16]
         {
             InvSBox[state[0]],
