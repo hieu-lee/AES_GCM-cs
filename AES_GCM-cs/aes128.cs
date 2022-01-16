@@ -66,7 +66,6 @@ unsafe class aes128
 
     static void SubAndShiftRows(byte* state)
     {
-        int i = 0;
         var temp = stackalloc byte[16]
         {
             SBox[state[0]],
@@ -91,7 +90,6 @@ unsafe class aes128
 
     static void InvSubAndShiftRows(byte* state)
     {
-        int i = 0;
         var temp = stackalloc byte[16]
         {
             InvSBox[state[0]],
@@ -208,6 +206,28 @@ unsafe class aes128
         *(uint*)res = *(uint*)temp ^ *(uint*)RoundKeyCopy;
         res[0] ^= RCon[10 - round];
         U128Copy(res, RoundKeyCopy);
+    }
+
+    // AES128 encryption function 
+    public static void AES128EncryptPointer(byte *input, byte *key, byte *output)
+    {
+        var state = stackalloc byte[16];
+        var RoundKey = stackalloc byte[16];
+        U128Copy(input, state);
+        U128Copy(key, RoundKey);
+        AddRoundKey(state, RoundKey);
+
+        for (var round = 1; round < 10; round++)
+        {
+            KeyExpansion(RoundKey, round);
+            SubAndShiftRows(state);
+            MixColumns(state);
+            AddRoundKey(state, RoundKey);
+        }
+        KeyExpansion(RoundKey, 10);
+        SubAndShiftRows(state);
+        AddRoundKey(state, RoundKey);
+        U128Copy(state, output);
     }
 
     // AES128 encryption function 
