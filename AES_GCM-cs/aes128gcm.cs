@@ -7,7 +7,6 @@ unsafe class aes128gcm
 {
 
     const int twoP32 = 4294967;
-    const ulong oneLong = 0x8000000000000000;
 
     static void CopyToArray128(byte* src, byte[] dst)
     {
@@ -91,21 +90,8 @@ unsafe class aes128gcm
         x[12] = (byte)after_mod;
     }
 
-    public static void right_shift(byte *v)
+    static void right_shift(byte *v)
     {
-        //var smt = new byte[16];
-        //var v_long = (ulong*)v;
-        //var bit = *v_long & 1;
-        //*v_long <<= 1;
-        //v_long++;
-        //*v_long >>= 1;
-        //if (bit == 1)
-        //{
-        //    *v_long |= oneLong;
-        //}
-        //CopyToArray128(v, smt);
-        //return;
-
         int i;
         int lowestBit, highestBit;
         lowestBit = *v & 1;
