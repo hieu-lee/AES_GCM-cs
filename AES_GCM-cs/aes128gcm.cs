@@ -189,44 +189,41 @@ unsafe class aes128gcm
         U128Copy(Y, output);
     }
 
-    static void Gctr128(byte[] K, byte* ICB, byte *X, byte *Tag)
+    static void Gctr128(byte *K, byte* ICB, byte *X, byte *Tag)
     {
         int i;
-        byte[] tmp;
-        var CB = new byte[16];
-        CopyToArray128(ICB, CB);
+        var tmp = stackalloc byte[16];
+        var CB = stackalloc byte[16];
+        U128Copy(ICB, CB);
 
-        tmp = aes128.AES128E(CB, K).Item1;
-        for (i = 0; i < 16; i++)
-        {
-            *Tag= (byte)(tmp[i] ^ X[i]);
-            Tag++;
-        }
+        aes128.AES128EncryptPointer(CB, K, tmp);
+        *(ulong*)Tag = *(ulong*)tmp ^ *(ulong*)X;
+        *(ulong*)(Tag + 8) = *(ulong*)(tmp + 8) ^ *(ulong*)(X + 8);
     }
 
-    static void Gctr(byte[] K, byte *ICB, byte[] X, int len_X, int last_len_X, byte[] Cipher)
+    static void Gctr(byte *K, byte *ICB, byte[] X, int len_X, int last_len_X, byte[] Cipher)
     {
+        var CB = stackalloc byte[16];
         if (X.Length == 0)
         {
             return;
         }
         int i, j, c;
-        byte[] tmp;
-        var CB = new byte[16];
-        CopyToArray128(ICB, CB);
+        var tmp = stackalloc byte[16];
+        U128Copy(ICB, CB);
 
         for (i = 0; i < len_X - 1; i++)
         {
             c = i << 4;
-            tmp = aes128.AES128E(CB, K).Item1;
+            aes128.AES128EncryptPointer(CB, K, tmp);
             for (j = 0; j < 16; j++)
             {
                 Cipher[c + j] = (byte)(tmp[j] ^ X[c + j]);
             }
-            inc32(CB);
+            inc32Ptr(CB);
         }
 
-        tmp = aes128.AES128E(CB, K).Item1;
+        aes128.AES128EncryptPointer(CB, K, tmp);
         c = (len_X - 1) << 4;
         for (i = 0; i < last_len_X; i++)
         {
@@ -304,28 +301,30 @@ unsafe class aes128gcm
     // Encryption function
     public static GcmOutput AES128GCMe(byte[] IV, byte[] _P, byte[] _A, byte[] K)
     {
+        var key = stackalloc byte[16];
         var last_len_a = ((_A.Length & 15) == 0) ? 16 : (_A.Length & 15);
         var last_len_p = ((_P.Length & 15) == 0) ? 16 : (_P.Length & 15);
         var len_a = (last_len_a == 16) ? (_A.Length >> 4) : ((_A.Length >> 4) + 1);
         var len_p = (last_len_p == 16) ? (_P.Length >> 4) : ((_P.Length >> 4) + 1);
         var C = new byte[_P.Length];
         var T = stackalloc byte[16];
-        var H = stackalloc byte[16];    
-        CopyToPtr128(aes128.AES128E(new byte[16]
-        {
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        }, K).Item1, H);
+        var H = stackalloc byte[16];
+        var ZeroU128 = stackalloc byte[16];
+        *(ulong*)ZeroU128 = 0;
+        *(ulong*)(ZeroU128 + 8) = 0;
+        CopyToPtr128(K, key);
+        aes128.AES128EncryptPointer(ZeroU128, key, H);
         var Y0 = stackalloc byte[16];
-        Y0[12] = 0;
-        Y0[13] = 0;
-        Y0[14] = 0;
-        Y0[15] = 1;
-        for (int i = 0; i < 12; i++)
+        *(uint*)(Y0 + 12) = 16777216;
+        fixed (byte* IVptr = IV)
         {
-            Y0[i] = IV[i];
+            var scan = IVptr;
+            *(ulong*)Y0 = *(ulong*)scan;
+            scan += 8;
+            *(uint*)(Y0 + 8) = *(uint*)scan;
         }
         inc32Ptr(Y0);
-        Gctr(K, Y0, _P, len_p, last_len_p, C);
+        Gctr(key, Y0, _P, len_p, last_len_p, C);
         var temp = stackalloc byte[16];
         concate_block((ulong)_A.Length, (ulong)C.Length, temp);
         len_a <<= 4;
@@ -347,23 +346,22 @@ unsafe class aes128gcm
         }
         var S = stackalloc byte[16];
         Ghash(H, tmp, l >> 4, S);
-        Y0[12] = 0;
-        Y0[13] = 0;
-        Y0[14] = 0;
-        Y0[15] = 1;
-        var ptr = Y0;
-        for (int i = 0; i < 12; i++)
+        *(uint*)(Y0 + 12) = 16777216;
+        fixed (byte* IVptr = IV)
         {
-            *ptr = IV[i];
-            ptr++;
+            var scan = IVptr;
+            *(ulong*)Y0 = *(ulong*)scan;
+            scan += 8;
+            *(uint*)(Y0 + 8) = *(uint*)scan;
         }
-        Gctr128(K, Y0, S, T);
+        Gctr128(key, Y0, S, T);
         return new(C, T);
     }
 
     // Decryption function
     public static byte[] AES128GCMd(byte[] IV, byte[] _C, byte[] K, byte[] _A, byte[] _T)
     {
+        var key = stackalloc byte[16];
         var last_len_a = ((_A.Length & 15) == 0) ? 16 : (_A.Length & 15);
         var last_len_c = ((_C.Length & 15) == 0) ? 16 : (_C.Length & 15);
         var len_a = (last_len_a == 16) ? (_A.Length >> 4) : ((_A.Length >> 4) + 1);
@@ -371,6 +369,7 @@ unsafe class aes128gcm
         var P = new byte[_C.Length];
         var T = stackalloc byte[16];
         var H = stackalloc byte[16];
+        CopyToPtr128(K, key);
         CopyToPtr128(aes128.AES128E(new byte[16]
         {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -386,7 +385,7 @@ unsafe class aes128gcm
         }
         inc32Ptr(Y0);
 
-        Gctr(K, Y0, _C, len_c, last_len_c, P);
+        Gctr(key, Y0, _C, len_c, last_len_c, P);
 
         var temp = stackalloc byte[16];
         concate_block((ulong)_A.Length, (ulong)_C.Length, temp);
@@ -418,7 +417,7 @@ unsafe class aes128gcm
             *Y0 = IV[i];
             Y0++;
         }
-        Gctr128(K, Y0, S, T);
+        Gctr128(key, Y0, S, T);
 
         for (int i = 0; i < 16; i++)
         {

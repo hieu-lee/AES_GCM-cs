@@ -4,7 +4,8 @@ public class Program
     // Uncomment the line RunTest() to see some test results
     static void Main(string[] args)
     {
-        TestFunctions.RunTest();
+        TestFunctions.LastCheckToBeSure();
+        //TestFunctions.RunTest();
         //TestFunctions.RunTestAlternative();
     }
 }

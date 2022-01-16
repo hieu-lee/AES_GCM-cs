@@ -211,6 +211,28 @@ unsafe class aes128
     }
 
     // AES128 encryption function 
+    public static void AES128EncryptPointer(byte *input, byte *key, byte *output)
+    {
+        var state = stackalloc byte[16];
+        var RoundKey = stackalloc byte[16];
+        U128Copy(input, state);
+        U128Copy(key, RoundKey);
+        AddRoundKey(state, RoundKey);
+
+        for (var round = 1; round < 10; round++)
+        {
+            KeyExpansion(RoundKey, round);
+            SubAndShiftRows(state);
+            MixColumns(state);
+            AddRoundKey(state, RoundKey);
+        }
+        KeyExpansion(RoundKey, 10);
+        SubAndShiftRows(state);
+        AddRoundKey(state, RoundKey);
+        U128Copy(state, output);
+    }
+
+    // AES128 encryption function 
     public static TupleU128 AES128E(byte[] input, byte[] key)
     {
         var state = stackalloc byte[16];
