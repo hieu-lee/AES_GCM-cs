@@ -369,19 +369,23 @@ unsafe class aes128gcm
         var P = new byte[_C.Length];
         var T = stackalloc byte[16];
         var H = stackalloc byte[16];
+        var ZeroU128 = stackalloc byte[16];
+        *(ulong*)ZeroU128 = 0;
+        *(ulong*)(ZeroU128 + 8) = 0;
         CopyToPtr128(K, key);
-        CopyToPtr128(aes128.AES128E(new byte[16]
-        {
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        }, K).Item1, H);
+        aes128.AES128EncryptPointer(ZeroU128, key, H);
+        //CopyToPtr128(aes128.AES128E(new byte[16]
+        //{
+        //    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        //}, K).Item1, H);
         var Y0 = stackalloc byte[16];
-        Y0[12] = 0;
-        Y0[13] = 0;
-        Y0[14] = 0;
-        Y0[15] = 1;
-        for (int i = 0; i < 12; i++)
+        *(uint*)(Y0 + 12) = 16777216;
+        fixed (byte* IVptr = IV)
         {
-            Y0[i] = IV[i];
+            var scan = IVptr;
+            *(ulong*)Y0 = *(ulong*)scan;
+            scan += 8;
+            *(uint*)(Y0 + 8) = *(uint*)scan;
         }
         inc32Ptr(Y0);
 
@@ -408,14 +412,13 @@ unsafe class aes128gcm
         }
         var S = stackalloc byte[16];
         Ghash(H, tmp, l >> 4, S);
-        Y0[12] = 0;
-        Y0[13] = 0;
-        Y0[14] = 0;
-        Y0[15] = 1;
-        for (int i = 0; i < 12; i++)
+        *(uint*)(Y0 + 12) = 16777216;
+        fixed (byte* IVptr = IV)
         {
-            *Y0 = IV[i];
-            Y0++;
+            var scan = IVptr;
+            *(ulong*)Y0 = *(ulong*)scan;
+            scan += 8;
+            *(uint*)(Y0 + 8) = *(uint*)scan;
         }
         Gctr128(key, Y0, S, T);
 
