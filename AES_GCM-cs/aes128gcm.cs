@@ -1,10 +1,13 @@
-﻿namespace AES_GCM_cs;
+﻿using System.Numerics;
+
+namespace AES_GCM_cs;
 
 // My own AES128GCM implementation after reading stuffs
 unsafe class aes128gcm
 {
 
     const int twoP32 = 4294967;
+    const ulong oneLong = 0x8000000000000000;
 
     static void CopyToArray128(byte* src, byte[] dst)
     {
@@ -90,14 +93,35 @@ unsafe class aes128gcm
 
     public static void right_shift(byte *v)
     {
-        var v_long = (ulong*)v;
-        var highestBit = *v_long & 1;
-        *v_long >>= 1;
-        v_long++;
-        *v_long >>= 1;
-        if (highestBit != 0)
+        //var smt = new byte[16];
+        //var v_long = (ulong*)v;
+        //var bit = *v_long & 1;
+        //*v_long <<= 1;
+        //v_long++;
+        //*v_long >>= 1;
+        //if (bit == 1)
+        //{
+        //    *v_long |= oneLong;
+        //}
+        //CopyToArray128(v, smt);
+        //return;
+
+        int i;
+        int lowestBit, highestBit;
+        lowestBit = *v & 1;
+        *v >>= 1;
+        v++;
+        highestBit = lowestBit;
+        for (i = 1; i < 16; i++)
         {
-            *v_long |= (highestBit << 63);
+            lowestBit = *v & 1;
+            *v >>= 1;
+            if (highestBit == 1)
+            {
+                *v |= 0x80;
+            }
+            v++;
+            highestBit = lowestBit;
         }
     }
 
@@ -114,9 +138,14 @@ unsafe class aes128gcm
     static void concate_block(ulong LengthA, ulong LengthB, byte *output)
     {
         var pOutput = (ulong*)output;
-        *pOutput = LengthA;
+        *pOutput = (LengthA << 3);
         pOutput++;
-        *pOutput = LengthB;
+        *pOutput = (LengthB << 3);
+        for (int i = 0; i < 4; i++)
+        {
+            (output[i], output[7 - i]) = (output[7 - i], output[i]);
+            (output[8 + i], output[15 - i]) = (output[15 - i], output[8 + i]);
+        }
     }
 
     static void g_mult(byte *X, byte *Y, byte *output)
@@ -137,31 +166,29 @@ unsafe class aes128gcm
                 {
                     xor_block_128(Z, V);
                 }
-
                 lsb = V[15] & 0x01;
                 right_shift(V);
+                
                 if (lsb == 1)
                 {
                     *V ^= 0xe1;
                 }
+
             }
             X++;
         }
 
-        U128Copy(output, Z);
+        U128Copy(Z, output);
     }
 
     static void Ghash(byte *H, byte[] X, int len_X, byte *output)
     {
         int c;
         var temp = stackalloc byte[16];
-        for (int i = 0; i < 16; i++)
-        {
-            temp[i] = X[i];
-        }
+        CopyToPtr128(X, temp);
         var Y = stackalloc byte[16];
-        g_mult(H, temp, Y);
 
+        g_mult(H, temp, Y);
         for (int i = 1; i < len_X; i++)
         {
             c = i << 4;
@@ -172,7 +199,7 @@ unsafe class aes128gcm
             xor_block_128(Y, temp);
             g_mult(Y, H, Y);
         }
-
+        
         U128Copy(Y, output);
     }
 
@@ -338,10 +365,11 @@ unsafe class aes128gcm
         Y0[13] = 0;
         Y0[14] = 0;
         Y0[15] = 1;
+        var ptr = Y0;
         for (int i = 0; i < 12; i++)
         {
-            *Y0 = IV[i];
-            Y0++;
+            *ptr = IV[i];
+            ptr++;
         }
         Gctr128(K, Y0, S, T);
         return new(C, T);
