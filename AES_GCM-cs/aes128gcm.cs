@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-
-namespace AES_GCM_cs;
+﻿namespace AES_GCM_cs;
 
 // My own AES128GCM implementation after reading stuffs
 unsafe class aes128gcm

@@ -2,4 +2,4 @@
 global using BenchmarkDotNet.Attributes;
 global using BenchmarkDotNet.Running;
 global using System.Text;
-global using System.Threading.Tasks;
+global using System.Security.Cryptography;
