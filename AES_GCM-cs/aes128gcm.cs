@@ -91,8 +91,9 @@ unsafe class aes128gcm
         *pOutput = (LengthB << 3);
         for (int i = 0; i < 4; i++)
         {
-            (output[i], output[7 - i]) = (output[7 - i], output[i]);
-            (output[8 + i], output[15 - i]) = (output[15 - i], output[8 + i]);
+            int a = 7 - i, b = 8 + i, c = 15 - i;
+            (output[i], output[a]) = (output[a], output[i]);
+            (output[b], output[c]) = (output[c], output[b]);
         }
     }
 

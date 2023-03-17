@@ -120,12 +120,13 @@ unsafe class aes128
         for (i = 0; i < 4; i++)
         {
             c = i << 2;
-            t = (byte)(state[c] ^ state[c + 1] ^ state[c + 2] ^ state[c + 3]);
+            int d = c + 1, e = c + 2, f = c + 3;
+            t = (byte)(state[c] ^ state[d] ^ state[e] ^ state[f]);
             u = state[c];
-            state[c] ^= (byte)(t ^ XTime((byte)(state[c] ^ state[c + 1])));
-            state[c + 1] ^= (byte)(t ^ XTime((byte)(state[c + 1] ^ state[c + 2])));
-            state[c + 2] ^= (byte)(t ^ XTime((byte)(state[c + 2] ^ state[c + 3])));
-            state[c + 3] ^= (byte)(t ^ XTime((byte)(state[c + 3] ^ u)));
+            state[c] ^= (byte)(t ^ XTime((byte)(state[c] ^ state[d])));
+            state[d] ^= (byte)(t ^ XTime((byte)(state[d] ^ state[e])));
+            state[e] ^= (byte)(t ^ XTime((byte)(state[e] ^ state[f])));
+            state[f] ^= (byte)(t ^ XTime((byte)(state[f] ^ u)));
         }
     }
 
