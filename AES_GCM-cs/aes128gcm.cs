@@ -5,6 +5,8 @@ unsafe class aes128gcm
 {
 
     const int twoP32 = 4294967;
+    const ulong getLastBits = 0x101010101010101;
+    const ulong setFirstBits = 0x7F7F7F7F7F7F7F7F;
 
     static void CopyToPtr128(byte[] src, byte* dst)
     {
@@ -54,22 +56,26 @@ unsafe class aes128gcm
 
     static void right_shift(byte *v)
     {
-        int i;
-        int lowestBit, highestBit;
-        lowestBit = *v & 1;
-        *v >>= 1;
-        v++;
-        highestBit = lowestBit;
-        for (i = 1; i < 16; i++)
+        ulong temp;
+        ulong* vLong = (ulong*)v;
+        temp = getLastBits & *vLong;
+        temp <<= 15;
+        int highestBit = v[7] & 1;
+        *vLong >>= 1;
+        *vLong &= setFirstBits;
+        *vLong |= temp;
+
+        vLong++;
+
+        temp = getLastBits & *vLong;
+        temp <<= 15;
+        *vLong >>= 1;
+        *vLong &= setFirstBits;
+        *vLong |= temp;
+        v = (byte*)vLong;
+        if (highestBit == 1)
         {
-            lowestBit = *v & 1;
-            *v >>= 1;
-            if (highestBit == 1)
-            {
-                *v |= 0x80;
-            }
-            v++;
-            highestBit = lowestBit;
+            v[0] |= 0x80;
         }
     }
 
