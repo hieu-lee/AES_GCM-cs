@@ -7,6 +7,8 @@ public class TestFunctions
     byte[] K = new byte[16];
     byte[] IV = new byte[12];
     byte[] P = new byte[1000000];
+    byte[] C = new byte[1000000];
+    byte[] T = new byte[16];
     byte[] A = new byte[24];
 
     [Benchmark]
@@ -31,6 +33,18 @@ public class TestFunctions
         rng.NextBytes(P);
         rng.NextBytes(A);
         _ = aes128gcm.AES128GCMe(IV, P, A, K);
+    }
+
+    [Benchmark]
+    public void TheirGCM()
+    {
+        rng.NextBytes(K);
+        rng.NextBytes(IV);
+        rng.NextBytes(P);
+        rng.NextBytes(A);
+        // Encrypt using api from System.Security.Cryptography
+        using var AesGcm = new AesGcm(K);
+        AesGcm.Encrypt(IV, P, C, T, A);
     }
 
     public static void RunTest()
@@ -128,6 +142,46 @@ public class TestFunctions
         var _p = aes128gcm.AES128GCMd(IV, C, K, A, T);
         Console.WriteLine("\nText after decryption:");
         Console.WriteLine(Encoding.UTF8.GetString(_p));
+    }
+
+    public static void RunRandomizeTest()
+    {
+        Random rng = new Random();
+        byte[] K = new byte[16];
+        byte[] IV = new byte[12];
+        byte[] P = new byte[1000000];
+        byte[] C = new byte[1000000];
+        byte[] T = new byte[16];
+        byte[] A = new byte[24];
+        rng.NextBytes(K);
+        rng.NextBytes(IV);
+        rng.NextBytes(P);
+        rng.NextBytes(A);
+
+        using var AesGcm = new AesGcm(K);
+        AesGcm.Encrypt(IV, P, C, T, A);
+
+        var MyOutput = aes128gcm.AES128GCMe(IV, P, A, K);
+
+        for (int i = 0; i < 16; i++)
+        {
+            if (T[i] != MyOutput.Tag[i])
+            {
+                Console.WriteLine("FAIL TAG");
+                return;
+            }
+        }
+
+        for (int i = 0; i < 1000000; i++)
+        {
+            if (C[i] != MyOutput.CipherText[i])
+            {
+                Console.WriteLine("FAIL CIPHER");
+                return;
+            }
+        }
+
+        Console.WriteLine("OKE");
     }
 
     public static void PrintArray(byte[] arr)
