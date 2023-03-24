@@ -10,13 +10,14 @@ unsafe class aes128gcm
 
     static void CopyToPtr128(byte[] src, byte* dst)
     {
+        ulong* dstLong = (ulong*)dst;
         fixed (byte* src_ptr = src)
         {
             var scan = (ulong*)src_ptr;
-            *(ulong*)dst = *scan;
+            *dstLong = *scan;
             scan++;
-            dst += 8;
-            *(ulong*)dst = *scan;
+            dstLong++;
+            *dstLong = *scan;
         }
     }
 

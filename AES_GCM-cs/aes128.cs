@@ -132,22 +132,19 @@ unsafe class aes128
 
     static void InvMixColumns(byte* state)
     {
-        byte u, v;
-        int i;
-        int c;
+        byte i, c;
+        uint u;
+        byte* ptrByte;
+        uint* ptrInt = (uint*)state;
         for (i = 0; i < 4; i++)
         {
-            c = i << 2;
-            var ptr = state + c;
-            u = XTime(XTime((byte)(*ptr ^ *(ptr + 2))));
-            v = XTime(XTime((byte)(*(ptr + 1) ^ *(ptr + 3))));
-            *ptr ^= u;
-            ptr++;
-            *ptr ^= v;
-            ptr++;
-            *ptr ^= u;
-            ptr++;
-            *ptr ^= v;
+            ptrByte = (byte*)ptrInt;
+            u = XTime(XTime((byte)(*(ptrByte + 1) ^ *(ptrByte + 3))));
+            u <<= 8;
+            u ^= XTime(XTime((byte)(*ptrByte ^ *(ptrByte + 2))));
+            u = (u << 16) ^ u;
+            *ptrInt ^= u;
+            ptrInt++;
         }
         MixColumns(state);
     }
@@ -164,49 +161,49 @@ unsafe class aes128
 
     static void KeyExpansion(byte* RoundKey, int round)
     {
-        var res = stackalloc byte[16];
-        var RoundKeyCopy = RoundKey;
-        var temp = stackalloc byte[4]
-        {
+        byte i;
+        byte* res = stackalloc byte[16];
+        uint* RoundKey32 = (uint*)RoundKey;
+        byte* temp = stackalloc byte[4] {
             SBox[RoundKey[13]],
             SBox[RoundKey[14]],
             SBox[RoundKey[15]],
             SBox[RoundKey[12]]
         };
-        *(uint*)res = *(uint*)temp ^ *(uint*)RoundKey;
-        var ptr = res + 4;
-        RoundKey += 4;
+        *(uint*)res = *(uint*)temp ^ *RoundKey32;
+        uint* ptr = (uint*)(res + 4);
+        RoundKey32++;
         *res ^= RCon[round - 1];
-        for (int i = 4; i < 16; i++)
+        for (i = 1; i < 4; i++)
         {
-            *ptr = (byte)(*(ptr - 4) ^ *RoundKey);
+            *ptr = *(ptr - 1) ^ *RoundKey32;
             ptr++;
-            RoundKey++;
+            RoundKey32++;
         }
-        U128Copy(res, RoundKeyCopy);
+        U128Copy(res, RoundKey);
     }
 
     static void InvKeyExpansion(byte* RoundKey, int round)
     {
-        var res = stackalloc byte[16];
-        var ptr = res + 4;
-        var RoundKeyCopy = RoundKey;
-        for (int i = 4; i < 16; i++)
+        byte* res = stackalloc byte[16];
+        uint* ptr = (uint*)(res + 4);
+        uint* RoundKey32 = (uint*)RoundKey;
+        byte i;
+        for (i = 1; i < 4; i++)
         {
-            *ptr = (byte)(*RoundKey ^ *(RoundKey + 4));
+            *ptr = *RoundKey32 ^ *(RoundKey32 + 1);
             ptr++;
-            RoundKey++;
+            RoundKey32++;
         }
-        var temp = stackalloc byte[4]
-        {
+        byte* temp = stackalloc byte[4] {
             SBox[res[13]],
             SBox[res[14]],
             SBox[res[15]],
             SBox[res[12]]
         };
-        *(uint*)res = *(uint*)temp ^ *(uint*)RoundKeyCopy;
+        *(uint*)res = *(uint*)temp ^ *(uint*)RoundKey;
         res[0] ^= RCon[10 - round];
-        U128Copy(res, RoundKeyCopy);
+        U128Copy(res, RoundKey);
     }
 
     // AES128 encryption function 
